@@ -40,7 +40,7 @@
                 this.isUploading = true;
                 this.uploadQueue = [];
                 this.totalFiles = files.length;
-                this.currentFileIndex = 0;
+                this.currentFileIndex = 1;
 
                 // Initialize queue with file metadata
                 for (let i = 0; i < files.length; i++) {
@@ -51,7 +51,8 @@
                         progress: 0,
                         speed: 0,
                         uploadedBytes: 0,
-                        status: 'pending', // pending, uploading, complete, error
+                        totalBytes: files[i].size,
+                        status: 'uploading', // all files start as uploading in bulk mode
                         error: null
                     });
                 }
@@ -59,46 +60,101 @@
                 try {
                     // Get upload URL from Livewire (once for all files)
                     const uploadUrl = await $wire.getUploadUrl();
-                    const baseUrl = new URL(uploadUrl);
-                    baseUrl.searchParams.append('directory', @js($this->path));
+                    const url = new URL(uploadUrl);
+                    url.searchParams.append('directory', @js($this->path));
 
-                    // Upload files sequentially (one at a time)
+                    // Upload all files in a single request (bulk upload)
+                    const formData = new FormData();
+                    let totalSize = 0;
                     for (let i = 0; i < files.length; i++) {
-                        this.currentFileIndex = i + 1;
-                        try {
-                            await this.uploadFile(i, baseUrl.toString());
-                        } catch (error) {
-                            // Continue with next file even if one fails
-                            console.error(`Failed to upload ${this.uploadQueue[i].name}:`, error);
-                        }
+                        formData.append('files', files[i]);
+                        totalSize += files[i].size;
                     }
 
-                    // Check if any uploads failed
-                    const failedUploads = this.uploadQueue.filter(f => f.status === 'error');
-                    
+                    await new Promise((resolve, reject) => {
+                        const xhr = new XMLHttpRequest();
+                        let lastLoaded = 0;
+                        let lastTime = Date.now();
+
+                        xhr.upload.addEventListener('progress', (e) => {
+                            if (e.lengthComputable) {
+                                const overallProgress = Math.round((e.loaded / e.total) * 100);
+                                
+                                // Calculate upload speed
+                                const currentTime = Date.now();
+                                const timeDiff = (currentTime - lastTime) / 1000;
+                                let currentSpeed = 0;
+                                if (timeDiff > 0.1) {
+                                    const bytesDiff = e.loaded - lastLoaded;
+                                    currentSpeed = bytesDiff / timeDiff;
+                                    lastTime = currentTime;
+                                    lastLoaded = e.loaded;
+                                }
+
+                                // Update all files proportionally
+                                for (let i = 0; i < this.uploadQueue.length; i++) {
+                                    const fileData = this.uploadQueue[i];
+                                    const fileProportion = fileData.totalBytes / totalSize;
+                                    fileData.uploadedBytes = Math.round(e.loaded * fileProportion);
+                                    fileData.progress = overallProgress;
+                                    fileData.speed = currentSpeed * fileProportion;
+                                }
+                            }
+                        });
+
+                        xhr.addEventListener('load', () => {
+                            if (xhr.status >= 200 && xhr.status < 300) {
+                                // Mark all files as complete
+                                for (let i = 0; i < this.uploadQueue.length; i++) {
+                                    this.uploadQueue[i].status = 'complete';
+                                    this.uploadQueue[i].progress = 100;
+                                }
+                                resolve();
+                            } else {
+                                // Mark all files as failed
+                                for (let i = 0; i < this.uploadQueue.length; i++) {
+                                    this.uploadQueue[i].status = 'error';
+                                    this.uploadQueue[i].error = `Upload failed (${xhr.status})`;
+                                }
+                                reject(new Error(`Upload failed with status: ${xhr.status}`));
+                            }
+                        });
+
+                        xhr.addEventListener('error', () => {
+                            // Mark all files as failed
+                            for (let i = 0; i < this.uploadQueue.length; i++) {
+                                this.uploadQueue[i].status = 'error';
+                                this.uploadQueue[i].error = 'Network error';
+                            }
+                            reject(new Error('Upload failed'));
+                        });
+
+                        xhr.addEventListener('abort', () => {
+                            // Mark all files as failed
+                            for (let i = 0; i < this.uploadQueue.length; i++) {
+                                this.uploadQueue[i].status = 'error';
+                                this.uploadQueue[i].error = 'Upload cancelled';
+                            }
+                            reject(new Error('Upload aborted'));
+                        });
+
+                        xhr.open('POST', url.toString());
+                        xhr.send(formData);
+                    });
+
                     // Refresh the component to show new files
                     await $wire.$refresh();
 
-                    // Show appropriate notification
-                    if (failedUploads.length === 0) {
-                        new window.FilamentNotification()
-                            .title('{{ trans('server/file.actions.upload.success') }}')
-                            .success()
-                            .send();
-                    } else if (failedUploads.length < this.totalFiles) {
-                        new window.FilamentNotification()
-                            .title(`${this.totalFiles - failedUploads.length} of ${this.totalFiles} files uploaded successfully`)
-                            .warning()
-                            .send();
-                    } else {
-                        new window.FilamentNotification()
-                            .title('{{ trans('server/file.actions.upload.failed') }}')
-                            .danger()
-                            .send();
-                    }
+                    // Show success notification
+                    new window.FilamentNotification()
+                        .title('{{ trans('server/file.actions.upload.success') }}')
+                        .success()
+                        .send();
 
                 } catch (error) {
                     console.error('Upload failed:', error);
+                    
+                    // Show error notification
                     new window.FilamentNotification()
                         .title('{{ trans('server/file.actions.upload.failed') }}')
                         .danger()
@@ -110,63 +166,6 @@
                         this.uploadQueue = [];
                     }, 2000);
                 }
-            },
-            async uploadFile(index, uploadUrl) {
-                const fileData = this.uploadQueue[index];
-                fileData.status = 'uploading';
-
-                return new Promise((resolve, reject) => {
-                    const xhr = new XMLHttpRequest();
-                    const formData = new FormData();
-                    formData.append('files', fileData.file);
-
-                    let lastLoaded = 0;
-                    let lastTime = Date.now();
-
-                    xhr.upload.addEventListener('progress', (e) => {
-                        if (e.lengthComputable) {
-                            fileData.uploadedBytes = e.loaded;
-                            fileData.progress = Math.round((e.loaded / e.total) * 100);
-                            
-                            // Calculate upload speed
-                            const currentTime = Date.now();
-                            const timeDiff = (currentTime - lastTime) / 1000;
-                            if (timeDiff > 0.1) {
-                                const bytesDiff = e.loaded - lastLoaded;
-                                fileData.speed = bytesDiff / timeDiff;
-                                lastTime = currentTime;
-                                lastLoaded = e.loaded;
-                            }
-                        }
-                    });
-
-                    xhr.addEventListener('load', () => {
-                        if (xhr.status >= 200 && xhr.status < 300) {
-                            fileData.status = 'complete';
-                            fileData.progress = 100;
-                            resolve();
-                        } else {
-                            fileData.status = 'error';
-                            fileData.error = `Upload failed (${xhr.status})`;
-                            reject(new Error(fileData.error));
-                        }
-                    });
-
-                    xhr.addEventListener('error', () => {
-                        fileData.status = 'error';
-                        fileData.error = 'Network error';
-                        reject(new Error('Upload failed'));
-                    });
-
-                    xhr.addEventListener('abort', () => {
-                        fileData.status = 'error';
-                        fileData.error = 'Upload cancelled';
-                        reject(new Error('Upload aborted'));
-                    });
-
-                    xhr.open('POST', uploadUrl);
-                    xhr.send(formData);
-                });
             },
             formatBytes(bytes) {
                 if (bytes === 0) return '0 B';
@@ -222,30 +221,31 @@
                         {{ trans('server/file.actions.upload.uploading') }}
                     </h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Uploading <span x-text="currentFileIndex"></span> of <span x-text="totalFiles"></span> files
+                        Uploading <span x-text="totalFiles"></span> <span x-text="totalFiles === 1 ? 'file' : 'files'"></span>
                     </p>
                 </div>
 
                 <!-- File List Table -->
                 <div class="flex-1 overflow-y-auto">
-                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead class="bg-gray-50 dark:bg-gray-900 sticky top-0">
-                            <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    File Name
-                                </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    Size
-                                </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    Progress
-                                </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    Status
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    <div class="flex justify-center">
+                        <table class="w-full max-w-5xl divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-50 dark:bg-gray-900 sticky top-0">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                        File Name
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                        Size
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                        Progress
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                        Status
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                             <template x-for="(fileData, index) in uploadQueue" :key="index">
                                 <tr>
                                     <!-- File Name -->
@@ -308,6 +308,7 @@
                             </template>
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </div>
         </div>
