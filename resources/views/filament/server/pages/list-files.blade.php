@@ -6,10 +6,6 @@
             isUploading: false,
             uploadProgress: 0,
             handleDragEnter(e) {
-                // Don't show overlay if a modal is open
-                if (document.querySelector('.fi-modal-window')) {
-                    return;
-                }
                 e.preventDefault();
                 e.stopPropagation();
                 this.dragCounter++;
@@ -24,18 +20,10 @@
                 }
             },
             handleDragOver(e) {
-                // Don't allow drop if a modal is open
-                if (document.querySelector('.fi-modal-window')) {
-                    return;
-                }
                 e.preventDefault();
                 e.stopPropagation();
             },
             async handleDrop(e) {
-                // Don't handle drop if a modal is open
-                if (document.querySelector('.fi-modal-window')) {
-                    return;
-                }
                 e.preventDefault();
                 e.stopPropagation();
                 this.isDragging = false;
