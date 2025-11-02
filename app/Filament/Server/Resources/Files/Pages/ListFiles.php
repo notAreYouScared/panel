@@ -635,6 +635,11 @@ class ListFiles extends ListRecords
         /** @var Server $server */
         $server = Filament::getTenant();
         
+        // Check if user has permission to upload files
+        if (!user()?->can(Permission::ACTION_FILE_CREATE, $server)) {
+            abort(403, 'You do not have permission to upload files.');
+        }
+        
         $controller = app(FileUploadController::class);
         $request = request();
         $response = $controller($request, $server);
