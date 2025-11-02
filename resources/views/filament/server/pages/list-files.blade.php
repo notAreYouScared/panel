@@ -1,92 +1,18 @@
+@vite('resources/js/files.js')
+
 <x-filament-panels::page>
     <div
-        x-data="{
-            isDragging: false,
-            dragCounter: 0,
-            isUploading: false,
-            uploadProgress: 0,
-            handleDragEnter(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                this.dragCounter++;
-                this.isDragging = true;
+        x-data="initFileUpload(
+            () => $wire.getUploadUrl(),
+            @js($this->path),
+            {
+                success: @js(trans('server/file.actions.upload.success')),
+                failed: @js(trans('server/file.actions.upload.failed')),
+                dropFiles: @js(trans('server/file.actions.upload.drop_files')),
+                uploading: @js(trans('server/file.actions.upload.uploading'))
             },
-            handleDragLeave(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                this.dragCounter--;
-                if (this.dragCounter === 0) {
-                    this.isDragging = false;
-                }
-            },
-            handleDragOver(e) {
-                e.preventDefault();
-                e.stopPropagation();
-            },
-            async handleDrop(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                this.isDragging = false;
-                this.dragCounter = 0;
-
-                const files = e.dataTransfer.files;
-                if (files.length === 0) return;
-
-                await this.uploadFiles(files);
-            },
-            async uploadFiles(files) {
-                try {
-                    this.isUploading = true;
-                    this.uploadProgress = 0;
-
-                    // Get upload URL from Livewire
-                    const uploadUrl = await $wire.getUploadUrl();
-
-                    // Upload each file directly to Wings
-                    for (let i = 0; i < files.length; i++) {
-                        const file = files[i];
-                        const formData = new FormData();
-                        formData.append('files', file);
-
-                        // Build URL with proper parameter handling
-                        const url = new URL(uploadUrl);
-                        url.searchParams.append('directory', @js($this->path));
-
-                        const response = await fetch(url.toString(), {
-                            method: 'POST',
-                            body: formData
-                        });
-
-                        if (!response.ok) {
-                            throw new Error('Upload failed for file: ' + file.name);
-                        }
-
-                        this.uploadProgress = Math.round(((i + 1) / files.length) * 100);
-                    }
-
-                    // Refresh the component to show new files
-                    await $wire.$refresh();
-
-                    // Show success notification
-                    new window.FilamentNotification()
-                        .title('{{ trans('server/file.actions.upload.success') }}')
-                        .success()
-                        .send();
-
-                } catch (error) {
-                    console.error('Upload failed:', error);
-                    
-                    // Show error notification using Filament's notification system
-                    new window.FilamentNotification()
-                        .title('{{ trans('server/file.actions.upload.failed') }}')
-                        .danger()
-                        .send();
-                } finally {
-                    this.isUploading = false;
-                    this.uploadProgress = 0;
-                }
-            }
-        }"
+            () => $wire.$refresh()
+        )"
         @dragenter.window="handleDragEnter($event)"
         @dragleave.window="handleDragLeave($event)"
         @dragover.window="handleDragOver($event)"
