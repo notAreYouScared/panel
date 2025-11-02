@@ -4,10 +4,9 @@
             isDragging: false,
             dragCounter: 0,
             isUploading: false,
-            uploadProgress: 0,
-            uploadSpeed: 0,
-            uploadedBytes: 0,
-            totalBytes: 0,
+            uploadQueue: [],
+            currentFileIndex: 0,
+            totalFiles: 0,
             handleDragEnter(e) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -38,99 +37,147 @@
                 await this.uploadFiles(files);
             },
             async uploadFiles(files) {
-                try {
-                    this.isUploading = true;
-                    this.uploadProgress = 0;
-                    this.uploadSpeed = 0;
-                    this.uploadedBytes = 0;
-                    this.totalBytes = 0;
+                this.isUploading = true;
+                this.uploadQueue = [];
+                this.totalFiles = files.length;
+                this.currentFileIndex = 0;
 
-                    // Calculate total bytes
-                    for (let i = 0; i < files.length; i++) {
-                        this.totalBytes += files[i].size;
-                    }
-
-                    // Get upload URL from Livewire
-                    const uploadUrl = await $wire.getUploadUrl();
-
-                    // Build URL with proper parameter handling (once, outside the loop)
-                    const url = new URL(uploadUrl);
-                    url.searchParams.append('directory', @js($this->path));
-
-                    // Upload all files in a single request
-                    const formData = new FormData();
-                    for (let i = 0; i < files.length; i++) {
-                        formData.append('files', files[i]);
-                    }
-
-                    // Use XMLHttpRequest for progress tracking
-                    await new Promise((resolve, reject) => {
-                        const xhr = new XMLHttpRequest();
-                        let startTime = Date.now();
-                        let lastLoaded = 0;
-                        let lastTime = startTime;
-
-                        xhr.upload.addEventListener('progress', (e) => {
-                            if (e.lengthComputable) {
-                                this.uploadedBytes = e.loaded;
-                                this.uploadProgress = Math.round((e.loaded / e.total) * 100);
-                                
-                                // Calculate upload speed
-                                const currentTime = Date.now();
-                                const timeDiff = (currentTime - lastTime) / 1000; // seconds
-                                if (timeDiff > 0.1) { // Update speed every 100ms
-                                    const bytesDiff = e.loaded - lastLoaded;
-                                    this.uploadSpeed = bytesDiff / timeDiff; // bytes per second
-                                    lastTime = currentTime;
-                                    lastLoaded = e.loaded;
-                                }
-                            }
-                        });
-
-                        xhr.addEventListener('load', () => {
-                            if (xhr.status >= 200 && xhr.status < 300) {
-                                resolve();
-                            } else {
-                                reject(new Error('Upload failed with status: ' + xhr.status));
-                            }
-                        });
-
-                        xhr.addEventListener('error', () => {
-                            reject(new Error('Upload failed'));
-                        });
-
-                        xhr.addEventListener('abort', () => {
-                            reject(new Error('Upload aborted'));
-                        });
-
-                        xhr.open('POST', url.toString());
-                        xhr.send(formData);
+                // Initialize queue with file metadata
+                for (let i = 0; i < files.length; i++) {
+                    this.uploadQueue.push({
+                        file: files[i],
+                        name: files[i].name,
+                        size: files[i].size,
+                        progress: 0,
+                        speed: 0,
+                        uploadedBytes: 0,
+                        status: 'pending', // pending, uploading, complete, error
+                        error: null
                     });
+                }
 
+                try {
+                    // Get upload URL from Livewire (once for all files)
+                    const uploadUrl = await $wire.getUploadUrl();
+                    const baseUrl = new URL(uploadUrl);
+                    baseUrl.searchParams.append('directory', @js($this->path));
+
+                    // Upload files concurrently (max 3 at a time)
+                    const maxConcurrent = 3;
+                    const uploadPromises = [];
+
+                    for (let i = 0; i < files.length; i++) {
+                        const promise = this.uploadFile(i, baseUrl.toString());
+                        uploadPromises.push(promise);
+
+                        // Limit concurrent uploads
+                        if (uploadPromises.length >= maxConcurrent) {
+                            await Promise.race(uploadPromises);
+                            uploadPromises.splice(uploadPromises.findIndex(p => p.settled), 1);
+                        }
+                    }
+
+                    // Wait for all uploads to complete
+                    await Promise.allSettled(uploadPromises);
+
+                    // Check if any uploads failed
+                    const failedUploads = this.uploadQueue.filter(f => f.status === 'error');
+                    
                     // Refresh the component to show new files
                     await $wire.$refresh();
 
-                    // Show success notification
-                    new window.FilamentNotification()
-                        .title('{{ trans('server/file.actions.upload.success') }}')
-                        .success()
-                        .send();
+                    // Show appropriate notification
+                    if (failedUploads.length === 0) {
+                        new window.FilamentNotification()
+                            .title('{{ trans('server/file.actions.upload.success') }}')
+                            .success()
+                            .send();
+                    } else if (failedUploads.length < this.totalFiles) {
+                        new window.FilamentNotification()
+                            .title(`${this.totalFiles - failedUploads.length} of ${this.totalFiles} files uploaded successfully`)
+                            .warning()
+                            .send();
+                    } else {
+                        new window.FilamentNotification()
+                            .title('{{ trans('server/file.actions.upload.failed') }}')
+                            .danger()
+                            .send();
+                    }
 
                 } catch (error) {
                     console.error('Upload failed:', error);
-                    
-                    // Show error notification using Filament's notification system
                     new window.FilamentNotification()
                         .title('{{ trans('server/file.actions.upload.failed') }}')
                         .danger()
                         .send();
                 } finally {
-                    this.isUploading = false;
-                    this.uploadProgress = 0;
-                    this.uploadSpeed = 0;
-                    this.uploadedBytes = 0;
-                    this.totalBytes = 0;
+                    // Keep the dialog open for 2 seconds to show completion
+                    setTimeout(() => {
+                        this.isUploading = false;
+                        this.uploadQueue = [];
+                    }, 2000);
                 }
+            },
+            async uploadFile(index, uploadUrl) {
+                const fileData = this.uploadQueue[index];
+                fileData.status = 'uploading';
+                this.currentFileIndex = index + 1;
+
+                return new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    const formData = new FormData();
+                    formData.append('files', fileData.file);
+
+                    let lastLoaded = 0;
+                    let lastTime = Date.now();
+
+                    xhr.upload.addEventListener('progress', (e) => {
+                        if (e.lengthComputable) {
+                            fileData.uploadedBytes = e.loaded;
+                            fileData.progress = Math.round((e.loaded / e.total) * 100);
+                            
+                            // Calculate upload speed
+                            const currentTime = Date.now();
+                            const timeDiff = (currentTime - lastTime) / 1000;
+                            if (timeDiff > 0.1) {
+                                const bytesDiff = e.loaded - lastLoaded;
+                                fileData.speed = bytesDiff / timeDiff;
+                                lastTime = currentTime;
+                                lastLoaded = e.loaded;
+                            }
+                        }
+                    });
+
+                    xhr.addEventListener('load', () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            fileData.status = 'complete';
+                            fileData.progress = 100;
+                            resolve();
+                        } else {
+                            fileData.status = 'error';
+                            fileData.error = `Upload failed (${xhr.status})`;
+                            reject(new Error(fileData.error));
+                        }
+                    });
+
+                    xhr.addEventListener('error', () => {
+                        fileData.status = 'error';
+                        fileData.error = 'Network error';
+                        reject(new Error('Upload failed'));
+                    });
+
+                    xhr.addEventListener('abort', () => {
+                        fileData.status = 'error';
+                        fileData.error = 'Upload cancelled';
+                        reject(new Error('Upload aborted'));
+                    });
+
+                    xhr.open('POST', uploadUrl);
+                    xhr.send(formData);
+                }).finally(() => {
+                    // Mark promise as settled for concurrent upload tracking
+                    return { settled: true };
+                });
             },
             formatBytes(bytes) {
                 if (bytes === 0) return '0 B';
@@ -177,25 +224,75 @@
         <div
             x-show="isUploading"
             x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 dark:bg-gray-100/20"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 dark:bg-gray-100/20 p-4"
         >
-            <div class="rounded-lg bg-white p-8 shadow-xl dark:bg-gray-800">
-                <div class="flex flex-col items-center space-y-4">
-                    <svg class="h-16 w-16 animate-spin text-primary-500" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <p class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <div class="rounded-lg bg-white shadow-xl dark:bg-gray-800 w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+                <!-- Header -->
+                <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
                         {{ trans('server/file.actions.upload.uploading') }}
+                    </h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        Uploading <span x-text="currentFileIndex"></span> of <span x-text="totalFiles"></span> files
                     </p>
-                    <div class="w-64 bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                        <div class="bg-primary-500 h-2.5 rounded-full transition-all duration-300" :style="`width: ${uploadProgress}%`"></div>
-                    </div>
-                    <div class="flex flex-col items-center space-y-1">
-                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100" x-text="`${uploadProgress}%`"></p>
-                        <p class="text-xs text-gray-600 dark:text-gray-400" x-show="uploadSpeed > 0" x-text="`${formatBytes(uploadedBytes)} / ${formatBytes(totalBytes)}`"></p>
-                        <p class="text-xs text-gray-600 dark:text-gray-400" x-show="uploadSpeed > 0" x-text="`${formatSpeed(uploadSpeed)}`"></p>
-                    </div>
+                </div>
+
+                <!-- File List -->
+                <div class="flex-1 overflow-y-auto p-6 space-y-4">
+                    <template x-for="(fileData, index) in uploadQueue" :key="index">
+                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                            <!-- File Name and Status -->
+                            <div class="flex items-start justify-between mb-2">
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate" x-text="fileData.name"></p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400" x-text="formatBytes(fileData.size)"></p>
+                                </div>
+                                <div class="ml-4 flex-shrink-0">
+                                    <!-- Status Badge -->
+                                    <span x-show="fileData.status === 'pending'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                                        Pending
+                                    </span>
+                                    <span x-show="fileData.status === 'uploading'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                        <svg class="animate-spin -ml-0.5 mr-1.5 h-3 w-3" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Uploading
+                                    </span>
+                                    <span x-show="fileData.status === 'complete'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                        <svg class="-ml-0.5 mr-1.5 h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                        </svg>
+                                        Complete
+                                    </span>
+                                    <span x-show="fileData.status === 'error'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                        <svg class="-ml-0.5 mr-1.5 h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                        </svg>
+                                        Failed
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Progress Bar (show only when uploading or complete) -->
+                            <div x-show="fileData.status === 'uploading' || fileData.status === 'complete'">
+                                <div class="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700 mb-2">
+                                    <div 
+                                        class="h-2 rounded-full transition-all duration-300"
+                                        :class="fileData.status === 'complete' ? 'bg-green-500' : 'bg-primary-500'"
+                                        :style="`width: ${fileData.progress}%`"
+                                    ></div>
+                                </div>
+                                <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400">
+                                    <span x-text="`${fileData.progress}%`"></span>
+                                    <span x-show="fileData.status === 'uploading' && fileData.speed > 0" x-text="formatSpeed(fileData.speed)"></span>
+                                </div>
+                            </div>
+
+                            <!-- Error Message -->
+                            <p x-show="fileData.status === 'error'" class="text-xs text-red-600 dark:text-red-400 mt-2" x-text="fileData.error"></p>
+                        </div>
+                    </template>
                 </div>
             </div>
         </div>
