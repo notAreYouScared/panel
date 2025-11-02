@@ -7,14 +7,15 @@ use App\Facades\Activity;
 use App\Filament\Components\Tables\Columns\BytesColumn;
 use App\Filament\Components\Tables\Columns\DateTimeColumn;
 use App\Filament\Server\Resources\Files\FileResource;
-use App\Http\Controllers\Api\Client\Servers\FileUploadController;
 use App\Livewire\AlertBanner;
 use App\Models\File;
 use App\Models\Permission;
 use App\Models\Server;
 use App\Repositories\Daemon\DaemonFileRepository;
+use App\Services\Nodes\NodeJWTService;
 use App\Traits\Filament\CanCustomizeHeaderActions;
 use App\Traits\Filament\CanCustomizeHeaderWidgets;
+use Carbon\CarbonImmutable;
 use Exception;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -640,12 +641,21 @@ class ListFiles extends ListRecords
             abort(403, 'You do not have permission to upload files.');
         }
         
-        $controller = app(FileUploadController::class);
-        $request = request();
-        $response = $controller($request, $server);
-        $data = json_decode($response->getContent(), true);
+        // Use the FileUploadController's logic to generate the upload URL
+        $jwtService = app(NodeJWTService::class);
+        $user = user();
         
-        return $data['attributes']['url'];
+        $token = $jwtService
+            ->setExpiresAt(CarbonImmutable::now()->addMinutes(15))
+            ->setUser($user)
+            ->setClaims(['server_uuid' => $server->uuid])
+            ->handle($server->node, $user->id . $server->uuid);
+        
+        return sprintf(
+            '%s/upload/file?token=%s',
+            $server->node->getConnectionAddress(),
+            $token->toString()
+        );
     }
 
     private function getDaemonFileRepository(): DaemonFileRepository

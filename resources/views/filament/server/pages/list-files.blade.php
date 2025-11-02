@@ -48,7 +48,7 @@
                         const formData = new FormData();
                         formData.append('files', file);
 
-                        const response = await fetch(uploadUrl + '&directory={{ urlencode($this->path) }}', {
+                        const response = await fetch(uploadUrl + '&directory=' + encodeURIComponent(@js($this->path)), {
                             method: 'POST',
                             body: formData
                         });

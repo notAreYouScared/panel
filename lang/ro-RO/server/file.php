@@ -17,10 +17,6 @@ return [
             'from_files' => 'Încărcă fişiere',
             'from_url' => 'Încarcă de la URL',
             'url' => 'URL',
-            'drop_files' => 'Drop files to upload',
-            'uploading' => 'Uploading files...',
-            'success' => 'Files uploaded successfully',
-            'failed' => 'Failed to upload files',
         ],
         'rename' => [
             'title' => 'Redenumește',

@@ -17,10 +17,6 @@ return [
             'from_files' => 'Bestanden uploaden',
             'from_url' => 'Uploaden vanaf URL',
             'url' => 'URL',
-            'drop_files' => 'Drop files to upload',
-            'uploading' => 'Uploading files...',
-            'success' => 'Files uploaded successfully',
-            'failed' => 'Failed to upload files',
         ],
         'rename' => [
             'title' => 'Naam Wijzigen',
