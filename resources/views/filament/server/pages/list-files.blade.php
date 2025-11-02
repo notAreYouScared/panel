@@ -5,6 +5,9 @@
             dragCounter: 0,
             isUploading: false,
             uploadProgress: 0,
+            uploadSpeed: 0,
+            uploadedBytes: 0,
+            totalBytes: 0,
             handleDragEnter(e) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -38,6 +41,14 @@
                 try {
                     this.isUploading = true;
                     this.uploadProgress = 0;
+                    this.uploadSpeed = 0;
+                    this.uploadedBytes = 0;
+                    this.totalBytes = 0;
+
+                    // Calculate total bytes
+                    for (let i = 0; i < files.length; i++) {
+                        this.totalBytes += files[i].size;
+                    }
 
                     // Get upload URL from Livewire
                     const uploadUrl = await $wire.getUploadUrl();
@@ -52,16 +63,49 @@
                         formData.append('files', files[i]);
                     }
 
-                    const response = await fetch(url.toString(), {
-                        method: 'POST',
-                        body: formData
+                    // Use XMLHttpRequest for progress tracking
+                    await new Promise((resolve, reject) => {
+                        const xhr = new XMLHttpRequest();
+                        let startTime = Date.now();
+                        let lastLoaded = 0;
+                        let lastTime = startTime;
+
+                        xhr.upload.addEventListener('progress', (e) => {
+                            if (e.lengthComputable) {
+                                this.uploadedBytes = e.loaded;
+                                this.uploadProgress = Math.round((e.loaded / e.total) * 100);
+                                
+                                // Calculate upload speed
+                                const currentTime = Date.now();
+                                const timeDiff = (currentTime - lastTime) / 1000; // seconds
+                                if (timeDiff > 0.1) { // Update speed every 100ms
+                                    const bytesDiff = e.loaded - lastLoaded;
+                                    this.uploadSpeed = bytesDiff / timeDiff; // bytes per second
+                                    lastTime = currentTime;
+                                    lastLoaded = e.loaded;
+                                }
+                            }
+                        });
+
+                        xhr.addEventListener('load', () => {
+                            if (xhr.status >= 200 && xhr.status < 300) {
+                                resolve();
+                            } else {
+                                reject(new Error('Upload failed with status: ' + xhr.status));
+                            }
+                        });
+
+                        xhr.addEventListener('error', () => {
+                            reject(new Error('Upload failed'));
+                        });
+
+                        xhr.addEventListener('abort', () => {
+                            reject(new Error('Upload aborted'));
+                        });
+
+                        xhr.open('POST', url.toString());
+                        xhr.send(formData);
                     });
-
-                    if (!response.ok) {
-                        throw new Error('Upload failed with status: ' + response.status);
-                    }
-
-                    this.uploadProgress = 100;
 
                     // Refresh the component to show new files
                     await $wire.$refresh();
@@ -83,7 +127,20 @@
                 } finally {
                     this.isUploading = false;
                     this.uploadProgress = 0;
+                    this.uploadSpeed = 0;
+                    this.uploadedBytes = 0;
+                    this.totalBytes = 0;
                 }
+            },
+            formatBytes(bytes) {
+                if (bytes === 0) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+            },
+            formatSpeed(bytesPerSecond) {
+                return this.formatBytes(bytesPerSecond) + '/s';
             }
         }"
         @dragenter.window="handleDragEnter($event)"
@@ -134,7 +191,11 @@
                     <div class="w-64 bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
                         <div class="bg-primary-500 h-2.5 rounded-full transition-all duration-300" :style="`width: ${uploadProgress}%`"></div>
                     </div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400" x-text="`${uploadProgress}%`"></p>
+                    <div class="flex flex-col items-center space-y-1">
+                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100" x-text="`${uploadProgress}%`"></p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400" x-show="uploadSpeed > 0" x-text="`${formatBytes(uploadedBytes)} / ${formatBytes(totalBytes)}`"></p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400" x-show="uploadSpeed > 0" x-text="`${formatSpeed(uploadSpeed)}`"></p>
+                    </div>
                 </div>
             </div>
         </div>
