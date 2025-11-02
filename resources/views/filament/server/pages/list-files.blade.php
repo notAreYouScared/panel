@@ -245,17 +245,17 @@
         <div
             x-show="isDragging"
             x-cloak
-            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter="transition-[opacity] duration-200 ease-out"
             x-transition:enter-start="opacity-0"
             x-transition:enter-end="opacity-100"
-            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave="transition-[opacity] duration-150 ease-in"
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
             class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 dark:bg-gray-100/20"
         >
             <div class="rounded-lg bg-white p-8 shadow-xl dark:bg-gray-800">
-                <div class="flex flex-col items-center space-y-4">
-                    <svg class="h-16 w-16 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="flex flex-col items-center gap-4">
+                    <svg class="size-16 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
@@ -288,27 +288,27 @@
                 <!-- File List Table -->
                 <div class="flex-1 overflow-y-auto">
                     <div class="flex justify-center">
-                        <table class="table-auto">
+                        <table class="w-full">
                             <thead class="bg-gray-50 dark:bg-gray-900 sticky top-0">
                             <tr>
                                 <th scope="col"
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    class="px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     File Name
                                 </th>
                                 <th scope="col"
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    class="px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     Size
                                 </th>
                                 <th scope="col"
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    class="px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     Progress
                                 </th>
                                 <th scope="col"
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    class="px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     Status
                                 </th>
                                 <th scope="col"
-                                    class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    class="px-6 py-3 text-end text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     Actions
                                 </th>
                             </tr>
@@ -334,13 +334,13 @@
 
                                     <!-- Progress -->
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="flex items-center space-x-3" style="min-width: 200px;">
+                                        <div class="flex items-center gap-3 min-w-[200px]">
                                             <div
                                                 x-show="fileData.status === 'uploading' || fileData.status === 'complete'"
                                                 class="flex-1">
                                                 <div class="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
                                                     <div
-                                                        class="h-2 rounded-full transition-all duration-300"
+                                                        class="h-2 rounded-full transition-[width] duration-300"
                                                         :class="fileData.status === 'complete' ? 'bg-green-500' : 'bg-primary-500'"
                                                         :style="`width: ${fileData.progress}%`"
                                                     ></div>
@@ -366,7 +366,7 @@
                                         </span>
                                         <span x-show="fileData.status === 'uploading'"
                                               class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                            <svg class="animate-spin -ml-0.5 mr-1.5 h-3 w-3" fill="none"
+                                            <svg class="animate-spin -ms-0.5 me-1.5 size-3" fill="none"
                                                  viewBox="0 0 24 24">
                                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
                                                         stroke-width="4"></circle>
@@ -377,7 +377,7 @@
                                         </span>
                                         <span x-show="fileData.status === 'complete'"
                                               class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                            <svg class="-ml-0.5 mr-1.5 h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                            <svg class="-ms-0.5 me-1.5 size-3" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fill-rule="evenodd"
                                                       d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
                                                       clip-rule="evenodd" />
@@ -386,7 +386,7 @@
                                         </span>
                                         <span x-show="fileData.status === 'error'"
                                               class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                                            <svg class="-ml-0.5 mr-1.5 h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                            <svg class="-ms-0.5 me-1.5 size-3" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fill-rule="evenodd"
                                                       d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
                                                       clip-rule="evenodd" />
@@ -396,7 +396,7 @@
                                     </td>
 
                                     <!-- Actions -->
-                                    <td class="px-6 py-4 whitespace-nowrap text-right">
+                                    <td class="px-6 py-4 whitespace-nowrap text-end">
                                         <button
                                             x-show="fileData.status === 'pending' || fileData.status === 'error'"
                                             @click="removeFile(index)"
@@ -404,7 +404,7 @@
                                             class="inline-flex items-center p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
                                             title="Remove file"
                                         >
-                                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <svg class="size-5" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fill-rule="evenodd"
                                                       d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
                                                       clip-rule="evenodd"/>
