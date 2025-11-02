@@ -68,7 +68,7 @@
                     await $wire.$refresh();
 
                     // Show success notification
-                    new Notification()
+                    new window.FilamentNotification()
                         .title('{{ trans('server/file.actions.upload.success') }}')
                         .success()
                         .send();
@@ -77,7 +77,7 @@
                     console.error('Upload failed:', error);
                     
                     // Show error notification using Filament's notification system
-                    new Notification()
+                    new window.FilamentNotification()
                         .title('{{ trans('server/file.actions.upload.failed') }}')
                         .danger()
                         .send();
