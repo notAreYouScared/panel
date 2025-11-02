@@ -279,47 +279,33 @@
             <div
                 class="rounded-lg bg-white shadow-xl dark:bg-gray-800 w-1/2 max-h-[50vh] overflow-hidden flex flex-col">
                 <!-- Header -->
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                            {{ trans('server/file.actions.upload.uploading') }}
-                        </h3>
-                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            <span x-text="currentFileIndex"></span> of <span x-text="totalFiles"></span> <span
-                                x-text="totalFiles === 1 ? 'file' : 'files'"></span> completed
-                        </p>
-                    </div>
-                    <button 
-                        type="button"
-                        @click="closeUploadDialog()"
-                        class="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400 transition"
-                    >
-                        <svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-center">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        {{ trans('server/file.actions.upload.uploading') }} - <span class="text-sm text-gray-600 dark:text-gray-400"><span x-text="currentFileIndex"></span> of <span x-text="totalFiles"></span> <span
+                                x-text="totalFiles === 1 ? 'file' : 'files'"></span> completed</span>
+                    </h3>
                 </div>
 
                 <!-- File List Table (Filament-styled) -->
                 <div class="flex-1 overflow-y-auto">
                     <div class="overflow-hidden">
                         <table class="w-full divide-y divide-gray-200 dark:divide-white/5">
-                            <thead class="bg-gray-50 dark:bg-white/5 sticky top-0">
+                            <thead class="bg-gray-50 dark:bg-gray-800 sticky top-0">
                             <tr>
                                 <th scope="col"
-                                    class="px-3 py-3.5 text-start text-sm font-semibold text-gray-950 dark:text-white sm:px-6">
+                                    class="px-4 py-3.5 text-start text-sm font-semibold text-gray-950 dark:text-white sm:px-6">
                                     <span class="group inline-flex items-center gap-x-1">File Name</span>
                                 </th>
                                 <th scope="col"
-                                    class="px-3 py-3.5 text-start text-sm font-semibold text-gray-950 dark:text-white sm:px-6">
+                                    class="px-4 py-3.5 text-start text-sm font-semibold text-gray-950 dark:text-white sm:px-6">
                                     <span class="group inline-flex items-center gap-x-1">Size</span>
                                 </th>
                                 <th scope="col"
-                                    class="px-3 py-3.5 text-start text-sm font-semibold text-gray-950 dark:text-white sm:px-6">
+                                    class="px-4 py-3.5 text-start text-sm font-semibold text-gray-950 dark:text-white sm:px-6">
                                     <span class="group inline-flex items-center gap-x-1">Progress</span>
                                 </th>
                                 <th scope="col"
-                                    class="px-3 py-3.5 text-start text-sm font-semibold text-gray-950 dark:text-white sm:px-6">
+                                    class="px-4 py-3.5 text-start text-sm font-semibold text-gray-950 dark:text-white sm:px-6">
                                     <span class="group inline-flex items-center gap-x-1">Status</span>
                                 </th>
                             </tr>
@@ -328,7 +314,7 @@
                             <template x-for="(fileData, index) in uploadQueue" :key="index">
                                 <tr class="transition duration-75 hover:bg-gray-50 dark:hover:bg-white/5">
                                     <!-- File Name -->
-                                    <td class="px-3 py-4 sm:px-6">
+                                    <td class="px-4 py-4 sm:px-6">
                                         <div class="flex flex-col gap-y-1">
                                             <div
                                                 class="text-sm font-medium leading-6 text-gray-950 dark:text-white truncate max-w-xs"
@@ -340,13 +326,13 @@
                                     </td>
 
                                     <!-- Size -->
-                                    <td class="px-3 py-4 sm:px-6">
+                                    <td class="px-4 py-4 sm:px-6">
                                         <div class="text-sm text-gray-500 dark:text-gray-400"
                                              x-text="formatBytes(fileData.size)"></div>
                                     </td>
 
                                     <!-- Progress -->
-                                    <td class="px-3 py-4 sm:px-6">
+                                    <td class="px-4 py-4 sm:px-6">
                                         <div x-show="fileData.status === 'uploading' || fileData.status === 'complete'" class="min-w-[150px]">
                                             <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden dark:bg-gray-700">
                                                 <div
@@ -366,7 +352,7 @@
                                     </td>
 
                                     <!-- Status -->
-                                    <td class="px-3 py-4 sm:px-6">
+                                    <td class="px-4 py-4 sm:px-6">
                                         <span x-show="fileData.status === 'pending'"
                                               class="inline-flex items-center gap-x-1 rounded-md text-xs font-medium ring-1 ring-inset px-1.5 py-0.5 bg-gray-50 text-gray-600 ring-gray-600/10 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">
                                             Pending
