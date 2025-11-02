@@ -150,11 +150,10 @@
                         .danger()
                         .send();
                 } finally {
-                    // Keep the dialog open for 2 seconds to show completion
                     setTimeout(() => {
                         this.isUploading = false;
                         this.uploadQueue = [];
-                    }, 2000);
+                    }, 500);
                 }
             },
             async uploadFile(index) {
@@ -289,7 +288,7 @@
                 <!-- File List Table -->
                 <div class="flex-1 overflow-y-auto">
                     <div class="flex justify-center">
-                        <table class="w-full max-w-5xl divide-y divide-gray-200 dark:divide-gray-700">
+                        <table class="table-auto">
                             <thead class="bg-gray-50 dark:bg-gray-900 sticky top-0">
                             <tr>
                                 <th scope="col"
