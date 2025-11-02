@@ -1,7 +1,7 @@
 /**
  * File manager drag and drop upload functionality
  */
-window.initFileUpload = function (getUploadUrl, currentPath, translations, refreshCallback) {
+window.initFileUpload = function (currentPath, translations) {
     return {
         isDragging: false,
         dragCounter: 0,
@@ -46,8 +46,8 @@ window.initFileUpload = function (getUploadUrl, currentPath, translations, refre
                 this.isUploading = true;
                 this.uploadProgress = 0;
 
-                // Get upload URL
-                const uploadUrl = await getUploadUrl();
+                // Get upload URL from Livewire component
+                const uploadUrl = await this.$wire.getUploadUrl();
 
                 // Build URL with proper parameter handling
                 const url = new URL(uploadUrl);
@@ -71,9 +71,7 @@ window.initFileUpload = function (getUploadUrl, currentPath, translations, refre
                 this.uploadProgress = 100;
 
                 // Refresh the component to show new files
-                if (refreshCallback) {
-                    await refreshCallback();
-                }
+                await this.$wire.$refresh();
 
                 // Show success notification
                 new window.FilamentNotification()

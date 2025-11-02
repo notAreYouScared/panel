@@ -3,15 +3,13 @@
 <x-filament-panels::page>
     <div
         x-data="initFileUpload(
-            () => $wire.getUploadUrl(),
             @js($this->path),
             {
                 success: @js(trans('server/file.actions.upload.success')),
                 failed: @js(trans('server/file.actions.upload.failed')),
                 dropFiles: @js(trans('server/file.actions.upload.drop_files')),
                 uploading: @js(trans('server/file.actions.upload.uploading'))
-            },
-            () => $wire.$refresh()
+            }
         )"
         @dragenter.window="handleDragEnter($event)"
         @dragleave.window="handleDragLeave($event)"
