@@ -17,6 +17,10 @@ return [
             'from_files' => '上传文件',
             'from_url' => '从网址上传',
             'url' => 'URL',
+            'drop_files' => 'Drop files to upload',
+            'uploading' => 'Uploading files...',
+            'success' => 'Files uploaded successfully',
+            'failed' => 'Failed to upload files',
         ],
         'rename' => [
             'title' => '重命名',

@@ -17,6 +17,10 @@ return [
             'from_files' => 'Fájlok feltöltése',
             'from_url' => 'Feltöltés URL-ből',
             'url' => 'URL',
+            'drop_files' => 'Drop files to upload',
+            'uploading' => 'Uploading files...',
+            'success' => 'Files uploaded successfully',
+            'failed' => 'Failed to upload files',
         ],
         'rename' => [
             'title' => 'Átnevezés',

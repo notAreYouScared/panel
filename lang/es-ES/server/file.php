@@ -17,6 +17,10 @@ return [
             'from_files' => 'Subir archivos',
             'from_url' => 'Subir desde una URL',
             'url' => 'URL',
+            'drop_files' => 'Drop files to upload',
+            'uploading' => 'Uploading files...',
+            'success' => 'Files uploaded successfully',
+            'failed' => 'Failed to upload files',
         ],
         'rename' => [
             'title' => 'Renombrar',

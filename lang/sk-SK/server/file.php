@@ -17,6 +17,10 @@ return [
             'from_files' => 'Nahrať súbory',
             'from_url' => 'Nahrať z URL',
             'url' => 'URL',
+            'drop_files' => 'Drop files to upload',
+            'uploading' => 'Uploading files...',
+            'success' => 'Files uploaded successfully',
+            'failed' => 'Failed to upload files',
         ],
         'rename' => [
             'title' => 'Premenovať',

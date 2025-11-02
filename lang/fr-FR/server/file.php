@@ -17,6 +17,10 @@ return [
             'from_files' => 'Importer des fichiers',
             'from_url' => 'Importer depuis l\'URL',
             'url' => 'URL',
+            'drop_files' => 'Drop files to upload',
+            'uploading' => 'Uploading files...',
+            'success' => 'Files uploaded successfully',
+            'failed' => 'Failed to upload files',
         ],
         'rename' => [
             'title' => 'Renommer',
