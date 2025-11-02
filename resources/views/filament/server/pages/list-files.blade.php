@@ -333,36 +333,29 @@
 
                                     <!-- Progress -->
                                     <td class="px-4 py-4 sm:px-6">
-                                        <div x-show="fileData.status === 'uploading' || fileData.status === 'complete'" class="min-w-[150px]">
-                                            <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden dark:bg-gray-700">
-                                                <div
-                                                    class="h-2 rounded-full transition-[width] duration-300 ease-out"
-                                                    :class="fileData.status === 'complete' ? 'bg-success-600 dark:bg-success-500' : 'bg-primary-600 dark:bg-primary-500'"
-                                                    :style="`width: ${fileData.progress}%`"
-                                                ></div>
-                                            </div>
-                                            <div class="flex justify-between mt-1 text-xs">
-                                                <span class="font-medium text-gray-700 dark:text-gray-300" x-text="`${fileData.progress}%`"></span>
-                                                <span x-show="fileData.status === 'uploading' && fileData.speed > 0"
-                                                      class="text-gray-500 dark:text-gray-400"
-                                                      x-text="formatSpeed(fileData.speed)"></span>
-                                            </div>
+                                        <div x-show="fileData.status === 'uploading' || fileData.status === 'complete'" class="flex justify-between items-center text-sm">
+                                            <span class="font-medium text-gray-700 dark:text-gray-300" x-text="`${fileData.progress}%`"></span>
+                                            <span x-show="fileData.status === 'uploading' && fileData.speed > 0"
+                                                  class="text-gray-500 dark:text-gray-400"
+                                                  x-text="formatSpeed(fileData.speed)"></span>
                                         </div>
                                         <span x-show="fileData.status === 'pending'" class="text-sm text-gray-500 dark:text-gray-400">—</span>
                                     </td>
 
                                     <!-- Status -->
                                     <td class="px-4 py-4 sm:px-6">
-                                        <span x-show="fileData.status === 'pending'"
-                                              class="inline-flex items-center gap-x-1 rounded-md text-xs font-medium ring-1 ring-inset px-1.5 py-0.5 bg-gray-50 text-gray-600 ring-gray-600/10 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">
-                                            Pending
+                                        <span x-show="fileData.status === 'pending'" class="flex items-center gap-x-2">
+                                            <span class="relative flex size-2">
+                                                <span class="absolute inline-flex size-full rounded-full bg-gray-400 opacity-75"></span>
+                                                <span class="relative inline-flex size-2 rounded-full bg-gray-500"></span>
+                                            </span>
                                         </span>
-                                        <span x-show="fileData.status === 'uploading'"
-                                              class="inline-flex items-center gap-x-1 rounded-md text-xs font-medium ring-1 ring-inset px-1.5 py-0.5 bg-info-50 text-info-700 ring-info-600/10 dark:bg-info-400/10 dark:text-info-400 dark:ring-info-400/30">
-                                            <svg class="animate-spin size-3" fill="none" viewBox="0 0 24 24">
-                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
+                                        <span x-show="fileData.status === 'uploading'" class="flex items-center gap-x-2">
+                                            <span class="relative flex size-2">
+                                                <span class="absolute inline-flex size-full animate-ping rounded-full bg-primary-400 opacity-75"></span>
+                                                <span class="relative inline-flex size-2 rounded-full bg-primary-500"></span>
+                                            </span>
+                                        </span>
                                             Uploading
                                         </span>
                                         <span x-show="fileData.status === 'complete'"
