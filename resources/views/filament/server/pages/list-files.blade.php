@@ -9,12 +9,18 @@
             totalFiles: 0,
             autoCloseTimer: null,
             handleDragEnter(e) {
+                if (document.querySelector('.fi-modal-content')) {
+                    return;
+                }
                 e.preventDefault();
                 e.stopPropagation();
                 this.dragCounter++;
                 this.isDragging = true;
             },
             handleDragLeave(e) {
+                if (document.querySelector('.fi-modal-content')) {
+                    return;
+                }
                 e.preventDefault();
                 e.stopPropagation();
                 this.dragCounter--;
@@ -23,10 +29,16 @@
                 }
             },
             handleDragOver(e) {
+                if (document.querySelector('.fi-modal-content')) {
+                    return;
+                }
                 e.preventDefault();
                 e.stopPropagation();
             },
             async handleDrop(e) {
+                if (document.querySelector('.fi-modal-content')) {
+                    return;
+                }
                 e.preventDefault();
                 e.stopPropagation();
                 this.isDragging = false;
