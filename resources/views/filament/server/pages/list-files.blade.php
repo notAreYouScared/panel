@@ -233,9 +233,14 @@
         >
             <div class="rounded-lg bg-white p-8 shadow-xl dark:bg-gray-800">
                 <div class="flex flex-col items-center gap-4">
-                    <svg class="size-16 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                         class="icon icon-tabler icons-tabler-outline icon-tabler-upload size-12 text-success-500"
+                         viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" />
+                        <path d="M7 9l5 -5l5 5" />
+                        <path d="M12 4l0 12" />
                     </svg>
                     <p class="text-lg font-semibold text-gray-900 dark:text-gray-100">
                         {{ trans('server/file.actions.upload.drop_files') }}
@@ -253,10 +258,10 @@
                 class="rounded-lg bg-white shadow-xl dark:bg-gray-800 w-1/2 max-h-[50vh] overflow-hidden flex flex-col">
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-center">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        {{ trans('server/file.actions.upload.uploading') }} - <span
-                            class="text-lg text-gray-600 dark:text-gray-400"><span x-text="currentFileIndex"></span> of <span
-                                x-text="totalFiles"></span> <span
-                                x-text="totalFiles === 1 ? 'file' : 'files'"></span> completed</span>
+                        {{ trans('server/file.actions.upload.header') }} -
+                        <span class="text-lg text-gray-600 dark:text-gray-400">
+                            <span x-text="currentFileIndex"></span> Of <span x-text="totalFiles"></span>
+                        </span>
                     </h3>
                 </div>
 
