@@ -48,7 +48,11 @@
                         const formData = new FormData();
                         formData.append('files', file);
 
-                        const response = await fetch(uploadUrl + '&directory=' + encodeURIComponent(@js($this->path)), {
+                        // Build URL with proper parameter handling
+                        const url = new URL(uploadUrl);
+                        url.searchParams.append('directory', @js($this->path));
+
+                        const response = await fetch(url.toString(), {
                             method: 'POST',
                             body: formData
                         });
@@ -60,19 +64,23 @@
                         this.uploadProgress = Math.round(((i + 1) / files.length) * 100);
                     }
 
-                    // Refresh the page to show new files
-                    window.location.reload();
+                    // Refresh the component to show new files
+                    await $wire.$refresh();
+
+                    // Show success notification
+                    new Notification()
+                        .title('{{ trans('server/file.actions.upload.success') }}')
+                        .success()
+                        .send();
 
                 } catch (error) {
                     console.error('Upload failed:', error);
                     
                     // Show error notification using Filament's notification system
-                    window.dispatchEvent(new CustomEvent('notify', {
-                        detail: {
-                            message: '{{ trans('server/file.actions.upload.failed') }}',
-                            type: 'danger'
-                        }
-                    }));
+                    new Notification()
+                        .title('{{ trans('server/file.actions.upload.failed') }}')
+                        .danger()
+                        .send();
                 } finally {
                     this.isUploading = false;
                     this.uploadProgress = 0;
