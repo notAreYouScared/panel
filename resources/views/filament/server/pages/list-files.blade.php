@@ -103,7 +103,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
                     <p class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        Drop files to upload
+                        {{ trans('server/file.actions.upload.drop_files') }}
                     </p>
                 </div>
             </div>
@@ -122,7 +122,7 @@
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                     <p class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        Uploading files...
+                        {{ trans('server/file.actions.upload.uploading') }}
                     </p>
                     <div class="w-64 bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
                         <div class="bg-primary-500 h-2.5 rounded-full transition-all duration-300" :style="`width: ${uploadProgress}%`"></div>
