@@ -7,6 +7,7 @@ use App\Facades\Activity;
 use App\Filament\Components\Tables\Columns\BytesColumn;
 use App\Filament\Components\Tables\Columns\DateTimeColumn;
 use App\Filament\Server\Resources\Files\FileResource;
+use App\Http\Controllers\Api\Client\Servers\FileUploadController;
 use App\Livewire\AlertBanner;
 use App\Models\File;
 use App\Models\Permission;
@@ -55,6 +56,8 @@ class ListFiles extends ListRecords
     use CanCustomizeHeaderWidgets;
 
     protected static string $resource = FileResource::class;
+
+    protected string $view = 'filament.server.pages.list-files';
 
     #[Locked]
     public string $path = '/';
@@ -625,6 +628,19 @@ class ListFiles extends ListRecords
             7 => ['read', 'write', 'execute'],
             default => [],
         };
+    }
+
+    public function getUploadUrl(): string
+    {
+        /** @var Server $server */
+        $server = Filament::getTenant();
+        
+        $controller = app(FileUploadController::class);
+        $request = request();
+        $response = $controller($request, $server);
+        $data = json_decode($response->getContent(), true);
+        
+        return $data['attributes']['url'];
     }
 
     private function getDaemonFileRepository(): DaemonFileRepository
