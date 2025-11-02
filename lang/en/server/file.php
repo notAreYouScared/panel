@@ -18,7 +18,7 @@ return [
             'from_url' => 'Upload from URL',
             'url' => 'URL',
             'drop_files' => 'Drop files to upload',
-            'uploading' => 'Uploading files...',
+            'uploading' => 'Uploading files',
             'success' => 'Files uploaded successfully',
             'failed' => 'Failed to upload files',
         ],

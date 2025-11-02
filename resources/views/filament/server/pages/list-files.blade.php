@@ -44,10 +44,8 @@
                 this.currentFileIndex = 0;
 
                 try {
-                    // Get upload size limit from server
                     const uploadSizeLimit = await $wire.getUploadSizeLimit();
 
-                    // Validate file sizes before uploading
                     for (let i = 0; i < files.length; i++) {
                         if (files[i].size > uploadSizeLimit) {
                             new window.FilamentNotification()
@@ -59,7 +57,6 @@
                         }
                     }
 
-                    // Initialize queue with file metadata
                     for (let i = 0; i < files.length; i++) {
                         this.uploadQueue.push({
                             file: files[i],
@@ -73,14 +70,11 @@
                         });
                     }
 
-                    // Upload files concurrently (max 3 at a time)
-                    // Each file gets its own token
                     const maxConcurrent = 3;
                     let activeUploads = [];
                     let completedCount = 0;
 
                     for (let i = 0; i < files.length; i++) {
-                        // Start upload (will get its own token)
                         const uploadPromise = this.uploadFile(i)
                             .then(() => {
                                 completedCount++;
@@ -89,16 +83,13 @@
                             .catch((error) => {
                                 completedCount++;
                                 this.currentFileIndex = completedCount;
-                                console.error(`Failed to upload ${this.uploadQueue[i].name}:`, error);
                             });
 
                         activeUploads.push(uploadPromise);
 
-                        // Wait if we hit the concurrent limit
                         if (activeUploads.length >= maxConcurrent) {
                             await Promise.race(activeUploads);
                             activeUploads = activeUploads.filter(p => {
-                                // Check if promise is still pending
                                 let isPending = true;
                                 p.then(() => { isPending = false; }).catch(() => { isPending = false; });
                                 return isPending;
@@ -106,16 +97,10 @@
                         }
                     }
 
-                    // Wait for all remaining uploads to complete
                     await Promise.allSettled(activeUploads);
-
-                    // Check results
                     const failedUploads = this.uploadQueue.filter(f => f.status === 'error');
-
-                    // Refresh the component to show new files
                     await $wire.$refresh();
 
-                    // Show appropriate notification
                     if (failedUploads.length === 0) {
                         new window.FilamentNotification()
                             .title('{{ trans('server/file.actions.upload.success') }}')
@@ -134,16 +119,12 @@
                     }
 
                 } catch (error) {
-                    console.error('Upload failed:', error);
                     new window.FilamentNotification()
                         .title('{{ trans('server/file.actions.upload.failed') }}')
                         .danger()
                         .send();
                 } finally {
-                    // Auto-close after 5 seconds when all uploads complete
-                    this.autoCloseTimer = setTimeout(() => {
-                        this.closeUploadDialog();
-                    }, 5000);
+                    this.closeUploadDialog();
                 }
             },
             async uploadFile(index) {
@@ -151,7 +132,6 @@
                 fileData.status = 'uploading';
 
                 try {
-                    // Get a fresh token for this file
                     const uploadUrl = await $wire.getUploadUrl();
                     const url = new URL(uploadUrl);
                     url.searchParams.append('directory', @js($this->path));
@@ -199,12 +179,6 @@
                             reject(new Error('Upload failed'));
                         });
 
-                        xhr.addEventListener('abort', () => {
-                            fileData.status = 'error';
-                            fileData.error = 'Upload cancelled';
-                            reject(new Error('Upload aborted'));
-                        });
-
                         xhr.open('POST', url.toString());
                         xhr.send(formData);
                     });
@@ -240,7 +214,7 @@
         }"
         @dragenter.window="handleDragEnter($event)"
         @dragleave.window="handleDragLeave($event)"
-        @dragover.window="handleDragOver($event)"
+        @dragover.window="handleDragOver($event)" s
         @drop.window="handleDrop($event)"
         @keydown.window="handleEscapeKey($event)"
         class="relative"
@@ -270,7 +244,6 @@
             </div>
         </div>
 
-        <!-- Upload Progress Overlay -->
         <div
             x-show="isUploading"
             x-cloak
@@ -278,42 +251,21 @@
         >
             <div
                 class="rounded-lg bg-white shadow-xl dark:bg-gray-800 w-1/2 max-h-[50vh] overflow-hidden flex flex-col">
-                <!-- Header -->
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-center">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        {{ trans('server/file.actions.upload.uploading') }} - <span class="text-sm text-gray-600 dark:text-gray-400"><span x-text="currentFileIndex"></span> of <span x-text="totalFiles"></span> <span
+                        {{ trans('server/file.actions.upload.uploading') }} - <span
+                            class="text-lg text-gray-600 dark:text-gray-400"><span x-text="currentFileIndex"></span> of <span
+                                x-text="totalFiles"></span> <span
                                 x-text="totalFiles === 1 ? 'file' : 'files'"></span> completed</span>
                     </h3>
                 </div>
 
-                <!-- File List Table (Filament-styled) -->
                 <div class="flex-1 overflow-y-auto">
                     <div class="overflow-hidden">
                         <table class="w-full divide-y divide-gray-200 dark:divide-white/5">
-                            <thead class="bg-gray-50 dark:bg-gray-800 sticky top-0">
-                            <tr>
-                                <th scope="col"
-                                    class="px-4 py-3.5 text-start text-sm font-semibold text-gray-950 dark:text-white sm:px-6">
-                                    <span class="group inline-flex items-center gap-x-1">File Name</span>
-                                </th>
-                                <th scope="col"
-                                    class="px-4 py-3.5 text-start text-sm font-semibold text-gray-950 dark:text-white sm:px-6">
-                                    <span class="group inline-flex items-center gap-x-1">Size</span>
-                                </th>
-                                <th scope="col"
-                                    class="px-4 py-3.5 text-start text-sm font-semibold text-gray-950 dark:text-white sm:px-6">
-                                    <span class="group inline-flex items-center gap-x-1">Progress</span>
-                                </th>
-                                <th scope="col"
-                                    class="px-4 py-3.5 text-start text-sm font-semibold text-gray-950 dark:text-white sm:px-6">
-                                    <span class="group inline-flex items-center gap-x-1">Status</span>
-                                </th>
-                            </tr>
-                            </thead>
                             <tbody class="divide-y divide-gray-200 dark:divide-white/5 bg-white dark:bg-gray-900">
                             <template x-for="(fileData, index) in uploadQueue" :key="index">
                                 <tr class="transition duration-75 hover:bg-gray-50 dark:hover:bg-white/5">
-                                    <!-- File Name -->
                                     <td class="px-4 py-4 sm:px-6">
                                         <div class="flex flex-col gap-y-1">
                                             <div
@@ -324,53 +276,22 @@
                                                  x-text="fileData.error"></div>
                                         </div>
                                     </td>
-
-                                    <!-- Size -->
                                     <td class="px-4 py-4 sm:px-6">
                                         <div class="text-sm text-gray-500 dark:text-gray-400"
                                              x-text="formatBytes(fileData.size)"></div>
                                     </td>
-
-                                    <!-- Progress -->
                                     <td class="px-4 py-4 sm:px-6">
-                                        <div x-show="fileData.status === 'uploading' || fileData.status === 'complete'" class="flex justify-between items-center text-sm">
-                                            <span class="font-medium text-gray-700 dark:text-gray-300" x-text="`${fileData.progress}%`"></span>
+                                        <div x-show="fileData.status === 'uploading' || fileData.status === 'complete'"
+                                             class="flex justify-between items-center text-sm">
+                                            <span class="font-medium text-gray-700 dark:text-gray-300"
+                                                  x-text="`${fileData.progress}%`"></span>
                                             <span x-show="fileData.status === 'uploading' && fileData.speed > 0"
                                                   class="text-gray-500 dark:text-gray-400"
                                                   x-text="formatSpeed(fileData.speed)"></span>
                                         </div>
-                                        <span x-show="fileData.status === 'pending'" class="text-sm text-gray-500 dark:text-gray-400">—</span>
-                                    </td>
-
-                                    <!-- Status -->
-                                    <td class="px-4 py-4 sm:px-6">
-                                        <span x-show="fileData.status === 'pending'" class="flex items-center gap-x-2">
-                                            <span class="relative flex size-2">
-                                                <span class="absolute inline-flex size-full rounded-full bg-gray-400 opacity-75"></span>
-                                                <span class="relative inline-flex size-2 rounded-full bg-gray-500"></span>
-                                            </span>
-                                        </span>
-                                        <span x-show="fileData.status === 'uploading'" class="flex items-center gap-x-2">
-                                            <span class="relative flex size-2">
-                                                <span class="absolute inline-flex size-full animate-ping rounded-full bg-primary-400 opacity-75"></span>
-                                                <span class="relative inline-flex size-2 rounded-full bg-primary-500"></span>
-                                            </span>
-                                        </span>
-                                            Uploading
-                                        </span>
-                                        <span x-show="fileData.status === 'complete'"
-                                              class="inline-flex items-center gap-x-1 rounded-md text-xs font-medium ring-1 ring-inset px-1.5 py-0.5 bg-success-50 text-success-700 ring-success-600/10 dark:bg-success-400/10 dark:text-success-400 dark:ring-success-400/30">
-                                            <svg class="size-3" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                            </svg>
-                                            Complete
-                                        </span>
-                                        <span x-show="fileData.status === 'error'"
-                                              class="inline-flex items-center gap-x-1 rounded-md text-xs font-medium ring-1 ring-inset px-1.5 py-0.5 bg-danger-50 text-danger-700 ring-danger-600/10 dark:bg-danger-400/10 dark:text-danger-400 dark:ring-danger-400/30">
-                                            <svg class="size-3" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                                            </svg>
-                                            Failed
+                                        <span x-show="fileData.status === 'pending'"
+                                              class="text-sm text-gray-500 dark:text-gray-400">
+                                            —
                                         </span>
                                     </td>
                                 </tr>
