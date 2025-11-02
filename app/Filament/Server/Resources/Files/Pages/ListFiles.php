@@ -658,6 +658,15 @@ class ListFiles extends ListRecords
         );
     }
 
+    public function getUploadSizeLimit(): int
+    {
+        /** @var Server $server */
+        $server = Filament::getTenant();
+        
+        // Return upload size limit in bytes (stored as MB in database)
+        return $server->node->upload_size * 1024 * 1024;
+    }
+
     private function getDaemonFileRepository(): DaemonFileRepository
     {
         /** @var Server $server */

@@ -40,121 +40,104 @@
                 this.isUploading = true;
                 this.uploadQueue = [];
                 this.totalFiles = files.length;
-                this.currentFileIndex = 1;
-
-                // Initialize queue with file metadata
-                for (let i = 0; i < files.length; i++) {
-                    this.uploadQueue.push({
-                        file: files[i],
-                        name: files[i].name,
-                        size: files[i].size,
-                        progress: 0,
-                        speed: 0,
-                        uploadedBytes: 0,
-                        totalBytes: files[i].size,
-                        status: 'uploading', // all files start as uploading in bulk mode
-                        error: null
-                    });
-                }
+                this.currentFileIndex = 0;
 
                 try {
-                    // Get upload URL from Livewire (once for all files)
-                    const uploadUrl = await $wire.getUploadUrl();
-                    const url = new URL(uploadUrl);
-                    url.searchParams.append('directory', @js($this->path));
+                    // Get upload size limit from server
+                    const uploadSizeLimit = await $wire.getUploadSizeLimit();
 
-                    // Upload all files in a single request (bulk upload)
-                    const formData = new FormData();
-                    let totalSize = 0;
+                    // Validate file sizes before uploading
                     for (let i = 0; i < files.length; i++) {
-                        formData.append('files', files[i]);
-                        totalSize += files[i].size;
+                        if (files[i].size > uploadSizeLimit) {
+                            new window.FilamentNotification()
+                                .title(`File "${files[i].name}" exceeds the upload size limit of ${this.formatBytes(uploadSizeLimit)}`)
+                                .danger()
+                                .send();
+                            this.isUploading = false;
+                            return;
+                        }
                     }
 
-                    await new Promise((resolve, reject) => {
-                        const xhr = new XMLHttpRequest();
-                        let lastLoaded = 0;
-                        let lastTime = Date.now();
-
-                        xhr.upload.addEventListener('progress', (e) => {
-                            if (e.lengthComputable) {
-                                const overallProgress = Math.round((e.loaded / e.total) * 100);
-                                
-                                // Calculate upload speed
-                                const currentTime = Date.now();
-                                const timeDiff = (currentTime - lastTime) / 1000;
-                                let currentSpeed = 0;
-                                if (timeDiff > 0.1) {
-                                    const bytesDiff = e.loaded - lastLoaded;
-                                    currentSpeed = bytesDiff / timeDiff;
-                                    lastTime = currentTime;
-                                    lastLoaded = e.loaded;
-                                }
-
-                                // Update all files proportionally
-                                for (let i = 0; i < this.uploadQueue.length; i++) {
-                                    const fileData = this.uploadQueue[i];
-                                    const fileProportion = fileData.totalBytes / totalSize;
-                                    fileData.uploadedBytes = Math.round(e.loaded * fileProportion);
-                                    fileData.progress = overallProgress;
-                                    fileData.speed = currentSpeed * fileProportion;
-                                }
-                            }
+                    // Initialize queue with file metadata
+                    for (let i = 0; i < files.length; i++) {
+                        this.uploadQueue.push({
+                            file: files[i],
+                            name: files[i].name,
+                            size: files[i].size,
+                            progress: 0,
+                            speed: 0,
+                            uploadedBytes: 0,
+                            status: 'pending',
+                            error: null
                         });
+                    }
 
-                        xhr.addEventListener('load', () => {
-                            if (xhr.status >= 200 && xhr.status < 300) {
-                                // Mark all files as complete
-                                for (let i = 0; i < this.uploadQueue.length; i++) {
-                                    this.uploadQueue[i].status = 'complete';
-                                    this.uploadQueue[i].progress = 100;
-                                }
-                                resolve();
-                            } else {
-                                // Mark all files as failed
-                                for (let i = 0; i < this.uploadQueue.length; i++) {
-                                    this.uploadQueue[i].status = 'error';
-                                    this.uploadQueue[i].error = `Upload failed (${xhr.status})`;
-                                }
-                                reject(new Error(`Upload failed with status: ${xhr.status}`));
-                            }
-                        });
+                    // Get upload URL once for all files (token stays valid for connection)
+                    const uploadUrl = await $wire.getUploadUrl();
+                    const baseUrl = new URL(uploadUrl);
+                    baseUrl.searchParams.append('directory', @js($this->path));
 
-                        xhr.addEventListener('error', () => {
-                            // Mark all files as failed
-                            for (let i = 0; i < this.uploadQueue.length; i++) {
-                                this.uploadQueue[i].status = 'error';
-                                this.uploadQueue[i].error = 'Network error';
-                            }
-                            reject(new Error('Upload failed'));
-                        });
+                    // Upload files concurrently (max 3 at a time)
+                    const maxConcurrent = 3;
+                    let activeUploads = [];
+                    let completedCount = 0;
 
-                        xhr.addEventListener('abort', () => {
-                            // Mark all files as failed
-                            for (let i = 0; i < this.uploadQueue.length; i++) {
-                                this.uploadQueue[i].status = 'error';
-                                this.uploadQueue[i].error = 'Upload cancelled';
-                            }
-                            reject(new Error('Upload aborted'));
-                        });
+                    for (let i = 0; i < files.length; i++) {
+                        // Start upload
+                        const uploadPromise = this.uploadFile(i, baseUrl.toString())
+                            .then(() => {
+                                completedCount++;
+                                this.currentFileIndex = completedCount;
+                            })
+                            .catch((error) => {
+                                completedCount++;
+                                this.currentFileIndex = completedCount;
+                                console.error(`Failed to upload ${this.uploadQueue[i].name}:`, error);
+                            });
 
-                        xhr.open('POST', url.toString());
-                        xhr.send(formData);
-                    });
+                        activeUploads.push(uploadPromise);
 
+                        // Wait if we hit the concurrent limit
+                        if (activeUploads.length >= maxConcurrent) {
+                            await Promise.race(activeUploads);
+                            activeUploads = activeUploads.filter(p => {
+                                // Check if promise is still pending
+                                let isPending = true;
+                                p.then(() => { isPending = false; }).catch(() => { isPending = false; });
+                                return isPending;
+                            });
+                        }
+                    }
+
+                    // Wait for all remaining uploads to complete
+                    await Promise.allSettled(activeUploads);
+
+                    // Check results
+                    const failedUploads = this.uploadQueue.filter(f => f.status === 'error');
+                    
                     // Refresh the component to show new files
                     await $wire.$refresh();
 
-                    // Show success notification
-                    new window.FilamentNotification()
-                        .title('{{ trans('server/file.actions.upload.success') }}')
-                        .success()
-                        .send();
+                    // Show appropriate notification
+                    if (failedUploads.length === 0) {
+                        new window.FilamentNotification()
+                            .title('{{ trans('server/file.actions.upload.success') }}')
+                            .success()
+                            .send();
+                    } else if (failedUploads.length < this.totalFiles) {
+                        new window.FilamentNotification()
+                            .title(`${this.totalFiles - failedUploads.length} of ${this.totalFiles} files uploaded successfully`)
+                            .warning()
+                            .send();
+                    } else {
+                        new window.FilamentNotification()
+                            .title('{{ trans('server/file.actions.upload.failed') }}')
+                            .danger()
+                            .send();
+                    }
 
                 } catch (error) {
                     console.error('Upload failed:', error);
-                    
-                    // Show error notification
                     new window.FilamentNotification()
                         .title('{{ trans('server/file.actions.upload.failed') }}')
                         .danger()
@@ -166,6 +149,63 @@
                         this.uploadQueue = [];
                     }, 2000);
                 }
+            },
+            async uploadFile(index, uploadUrl) {
+                const fileData = this.uploadQueue[index];
+                fileData.status = 'uploading';
+
+                return new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    const formData = new FormData();
+                    formData.append('files', fileData.file);
+
+                    let lastLoaded = 0;
+                    let lastTime = Date.now();
+
+                    xhr.upload.addEventListener('progress', (e) => {
+                        if (e.lengthComputable) {
+                            fileData.uploadedBytes = e.loaded;
+                            fileData.progress = Math.round((e.loaded / e.total) * 100);
+                            
+                            // Calculate upload speed
+                            const currentTime = Date.now();
+                            const timeDiff = (currentTime - lastTime) / 1000;
+                            if (timeDiff > 0.1) {
+                                const bytesDiff = e.loaded - lastLoaded;
+                                fileData.speed = bytesDiff / timeDiff;
+                                lastTime = currentTime;
+                                lastLoaded = e.loaded;
+                            }
+                        }
+                    });
+
+                    xhr.addEventListener('load', () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            fileData.status = 'complete';
+                            fileData.progress = 100;
+                            resolve();
+                        } else {
+                            fileData.status = 'error';
+                            fileData.error = `Upload failed (${xhr.status})`;
+                            reject(new Error(fileData.error));
+                        }
+                    });
+
+                    xhr.addEventListener('error', () => {
+                        fileData.status = 'error';
+                        fileData.error = 'Network error';
+                        reject(new Error('Upload failed'));
+                    });
+
+                    xhr.addEventListener('abort', () => {
+                        fileData.status = 'error';
+                        fileData.error = 'Upload cancelled';
+                        reject(new Error('Upload aborted'));
+                    });
+
+                    xhr.open('POST', uploadUrl);
+                    xhr.send(formData);
+                });
             },
             formatBytes(bytes) {
                 if (bytes === 0) return '0 B';
@@ -221,7 +261,7 @@
                         {{ trans('server/file.actions.upload.uploading') }}
                     </h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Uploading <span x-text="totalFiles"></span> <span x-text="totalFiles === 1 ? 'file' : 'files'"></span>
+                        <span x-text="currentFileIndex"></span> of <span x-text="totalFiles"></span> <span x-text="totalFiles === 1 ? 'file' : 'files'"></span> completed
                     </p>
                 </div>
 
