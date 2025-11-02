@@ -7,17 +7,6 @@
             uploadQueue: [],
             currentFileIndex: 0,
             totalFiles: 0,
-            removeFile(index) {
-                if (this.uploadQueue[index].status === 'uploading') {
-                    // Don't allow removing files that are currently uploading
-                    return;
-                }
-                this.uploadQueue.splice(index, 1);
-                this.totalFiles = this.uploadQueue.length;
-                if (this.uploadQueue.length === 0) {
-                    this.isUploading = false;
-                }
-            },
             handleDragEnter(e) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -285,131 +274,112 @@
                     </p>
                 </div>
 
-                <!-- File List Table -->
+                <!-- File List Table (Filament-styled) -->
                 <div class="flex-1 overflow-y-auto">
-                    <div class="flex justify-center">
-                        <table class="w-full">
-                            <thead class="bg-gray-50 dark:bg-gray-900 sticky top-0">
+                    <div class="overflow-hidden border-t border-gray-200 dark:border-white/5">
+                        <table class="w-full table-auto divide-y divide-gray-200 dark:divide-white/5">
+                            <thead class="bg-gray-50 dark:bg-white/5 sticky top-0">
                             <tr>
                                 <th scope="col"
-                                    class="px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    File Name
+                                    class="px-3 py-3.5 text-start text-sm font-semibold text-gray-950 dark:text-white sm:px-6">
+                                    <span class="group inline-flex items-center gap-x-1">File Name</span>
                                 </th>
                                 <th scope="col"
-                                    class="px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    Size
+                                    class="px-3 py-3.5 text-start text-sm font-semibold text-gray-950 dark:text-white sm:px-6">
+                                    <span class="group inline-flex items-center gap-x-1">Size</span>
                                 </th>
                                 <th scope="col"
-                                    class="px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    Progress
+                                    class="px-3 py-3.5 text-start text-sm font-semibold text-gray-950 dark:text-white sm:px-6">
+                                    <span class="group inline-flex items-center gap-x-1">Progress</span>
                                 </th>
                                 <th scope="col"
-                                    class="px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    Status
-                                </th>
-                                <th scope="col"
-                                    class="px-6 py-3 text-end text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    Actions
+                                    class="px-3 py-3.5 text-start text-sm font-semibold text-gray-950 dark:text-white sm:px-6">
+                                    <span class="group inline-flex items-center gap-x-1">Status</span>
                                 </th>
                             </tr>
                             </thead>
-                            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            <tbody class="divide-y divide-gray-200 dark:divide-white/5 bg-white dark:bg-gray-900">
                             <template x-for="(fileData, index) in uploadQueue" :key="index">
-                                <tr>
+                                <tr class="transition duration-75 hover:bg-gray-50 dark:hover:bg-white/5">
                                     <!-- File Name -->
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div
-                                            class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs"
-                                            x-text="fileData.name"></div>
-                                        <div x-show="fileData.status === 'error'"
-                                             class="text-xs text-red-600 dark:text-red-400 mt-1"
-                                             x-text="fileData.error"></div>
+                                    <td class="px-3 py-4 sm:px-6">
+                                        <div class="flex flex-col gap-y-1">
+                                            <div
+                                                class="text-sm font-medium leading-6 text-gray-950 dark:text-white truncate max-w-xs"
+                                                x-text="fileData.name"></div>
+                                            <div x-show="fileData.status === 'error'"
+                                                 class="text-xs text-danger-600 dark:text-danger-400"
+                                                 x-text="fileData.error"></div>
+                                        </div>
                                     </td>
 
                                     <!-- Size -->
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-3 py-4 sm:px-6">
                                         <div class="text-sm text-gray-500 dark:text-gray-400"
                                              x-text="formatBytes(fileData.size)"></div>
                                     </td>
 
                                     <!-- Progress -->
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-3 py-4 sm:px-6">
                                         <div class="flex items-center gap-3 min-w-[200px]">
                                             <div
                                                 x-show="fileData.status === 'uploading' || fileData.status === 'complete'"
                                                 class="flex-1">
-                                                <div class="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                                                <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden dark:bg-white/10">
                                                     <div
-                                                        class="h-2 rounded-full transition-[width] duration-300"
-                                                        :class="fileData.status === 'complete' ? 'bg-green-500' : 'bg-primary-500'"
+                                                        class="h-2 rounded-full transition-[width] duration-300 ease-out"
+                                                        :class="fileData.status === 'complete' ? 'bg-success-500' : 'bg-primary-600 dark:bg-primary-500'"
                                                         :style="`width: ${fileData.progress}%`"
                                                     ></div>
                                                 </div>
-                                                <div class="flex justify-between mt-1">
-                                                    <span class="text-xs text-gray-600 dark:text-gray-400"
+                                                <div class="flex justify-between mt-1.5">
+                                                    <span class="text-xs font-medium text-gray-700 dark:text-gray-300"
                                                           x-text="`${fileData.progress}%`"></span>
                                                     <span x-show="fileData.status === 'uploading' && fileData.speed > 0"
-                                                          class="text-xs text-gray-600 dark:text-gray-400"
+                                                          class="text-xs text-gray-500 dark:text-gray-400"
                                                           x-text="formatSpeed(fileData.speed)"></span>
                                                 </div>
                                             </div>
                                             <span x-show="fileData.status === 'pending'"
-                                                  class="text-sm text-gray-500 dark:text-gray-400">-</span>
+                                                  class="text-sm text-gray-500 dark:text-gray-400">—</span>
                                         </div>
                                     </td>
 
                                     <!-- Status -->
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-3 py-4 sm:px-6">
                                         <span x-show="fileData.status === 'pending'"
-                                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                                            Pending
+                                              class="fi-badge flex items-center justify-center gap-x-1 rounded-md text-xs font-medium ring-1 ring-inset px-2 min-w-[theme(spacing.6)] py-1 fi-color-gray fi-badge-color-gray bg-gray-50 text-gray-600 ring-gray-600/10 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">
+                                            <span class="fi-badge-label">Pending</span>
                                         </span>
                                         <span x-show="fileData.status === 'uploading'"
-                                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                            <svg class="animate-spin -ms-0.5 me-1.5 size-3" fill="none"
+                                              class="fi-badge flex items-center justify-center gap-x-1 rounded-md text-xs font-medium ring-1 ring-inset px-2 min-w-[theme(spacing.6)] py-1 fi-color-info fi-badge-color-info bg-info-50 text-info-700 ring-info-600/10 dark:bg-info-400/10 dark:text-info-400 dark:ring-info-400/30">
+                                            <svg class="animate-spin -ms-0.5 me-0.5 size-3.5" fill="none"
                                                  viewBox="0 0 24 24">
                                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
                                                         stroke-width="4"></circle>
                                                 <path class="opacity-75" fill="currentColor"
                                                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                             </svg>
-                                            Uploading
+                                            <span class="fi-badge-label">Uploading</span>
                                         </span>
                                         <span x-show="fileData.status === 'complete'"
-                                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                            <svg class="-ms-0.5 me-1.5 size-3" fill="currentColor" viewBox="0 0 20 20">
+                                              class="fi-badge flex items-center justify-center gap-x-1 rounded-md text-xs font-medium ring-1 ring-inset px-2 min-w-[theme(spacing.6)] py-1 fi-color-success fi-badge-color-success bg-success-50 text-success-700 ring-success-600/10 dark:bg-success-400/10 dark:text-success-400 dark:ring-success-400/30">
+                                            <svg class="-ms-0.5 me-0.5 size-3.5" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fill-rule="evenodd"
                                                       d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
                                                       clip-rule="evenodd" />
                                             </svg>
-                                            Complete
+                                            <span class="fi-badge-label">Complete</span>
                                         </span>
                                         <span x-show="fileData.status === 'error'"
-                                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                                            <svg class="-ms-0.5 me-1.5 size-3" fill="currentColor" viewBox="0 0 20 20">
+                                              class="fi-badge flex items-center justify-center gap-x-1 rounded-md text-xs font-medium ring-1 ring-inset px-2 min-w-[theme(spacing.6)] py-1 fi-color-danger fi-badge-color-danger bg-danger-50 text-danger-700 ring-danger-600/10 dark:bg-danger-400/10 dark:text-danger-400 dark:ring-danger-400/30">
+                                            <svg class="-ms-0.5 me-0.5 size-3.5" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fill-rule="evenodd"
                                                       d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
                                                       clip-rule="evenodd" />
                                             </svg>
-                                            Failed
+                                            <span class="fi-badge-label">Failed</span>
                                         </span>
-                                    </td>
-
-                                    <!-- Actions -->
-                                    <td class="px-6 py-4 whitespace-nowrap text-end">
-                                        <button
-                                            x-show="fileData.status === 'pending' || fileData.status === 'error'"
-                                            @click="removeFile(index)"
-                                            type="button"
-                                            class="inline-flex items-center p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
-                                            title="Remove file"
-                                        >
-                                            <svg class="size-5" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd"
-                                                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                                      clip-rule="evenodd"/>
-                                            </svg>
-                                        </button>
                                     </td>
                                 </tr>
                             </template>
