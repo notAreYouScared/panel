@@ -7,6 +7,7 @@
             uploadQueue: [],
             currentFileIndex: 0,
             totalFiles: 0,
+            autoCloseTimer: null,
             handleDragEnter(e) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -139,10 +140,10 @@
                         .danger()
                         .send();
                 } finally {
-                    setTimeout(() => {
-                        this.isUploading = false;
-                        this.uploadQueue = [];
-                    }, 500);
+                    // Auto-close after 5 seconds when all uploads complete
+                    this.autoCloseTimer = setTimeout(() => {
+                        this.closeUploadDialog();
+                    }, 5000);
                 }
             },
             async uploadFile(index) {
@@ -222,12 +223,26 @@
             },
             formatSpeed(bytesPerSecond) {
                 return this.formatBytes(bytesPerSecond) + '/s';
+            },
+            closeUploadDialog() {
+                if (this.autoCloseTimer) {
+                    clearTimeout(this.autoCloseTimer);
+                    this.autoCloseTimer = null;
+                }
+                this.isUploading = false;
+                this.uploadQueue = [];
+            },
+            handleEscapeKey(e) {
+                if (e.key === 'Escape' && this.isUploading) {
+                    this.closeUploadDialog();
+                }
             }
         }"
         @dragenter.window="handleDragEnter($event)"
         @dragleave.window="handleDragLeave($event)"
         @dragover.window="handleDragOver($event)"
         @drop.window="handleDrop($event)"
+        @keydown.window="handleEscapeKey($event)"
         class="relative"
     >
         <!-- Drag & Drop Overlay -->
@@ -262,22 +277,33 @@
             class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 dark:bg-gray-100/20 p-4"
         >
             <div
-                class="rounded-lg bg-white shadow-xl dark:bg-gray-800 w-full max-w-3xl max-h-[600px] overflow-hidden flex flex-col">
+                class="rounded-lg bg-white shadow-xl dark:bg-gray-800 w-1/2 max-h-[50vh] overflow-hidden flex flex-col">
                 <!-- Header -->
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        {{ trans('server/file.actions.upload.uploading') }}
-                    </h3>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        <span x-text="currentFileIndex"></span> of <span x-text="totalFiles"></span> <span
-                            x-text="totalFiles === 1 ? 'file' : 'files'"></span> completed
-                    </p>
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            {{ trans('server/file.actions.upload.uploading') }}
+                        </h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            <span x-text="currentFileIndex"></span> of <span x-text="totalFiles"></span> <span
+                                x-text="totalFiles === 1 ? 'file' : 'files'"></span> completed
+                        </p>
+                    </div>
+                    <button 
+                        type="button"
+                        @click="closeUploadDialog()"
+                        class="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400 transition"
+                    >
+                        <svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                 </div>
 
                 <!-- File List Table (Filament-styled) -->
                 <div class="flex-1 overflow-y-auto">
-                    <div class="overflow-hidden border-t border-gray-200 dark:border-white/5">
-                        <table class="w-full table-auto divide-y divide-gray-200 dark:divide-white/5">
+                    <div class="overflow-hidden">
+                        <table class="w-full divide-y divide-gray-200 dark:divide-white/5">
                             <thead class="bg-gray-50 dark:bg-white/5 sticky top-0">
                             <tr>
                                 <th scope="col"
@@ -321,64 +347,51 @@
 
                                     <!-- Progress -->
                                     <td class="px-3 py-4 sm:px-6">
-                                        <div class="flex items-center gap-3 min-w-[200px]">
-                                            <div
-                                                x-show="fileData.status === 'uploading' || fileData.status === 'complete'"
-                                                class="flex-1">
-                                                <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden dark:bg-white/10">
-                                                    <div
-                                                        class="h-2 rounded-full transition-[width] duration-300 ease-out"
-                                                        :class="fileData.status === 'complete' ? 'bg-success-500' : 'bg-primary-600 dark:bg-primary-500'"
-                                                        :style="`width: ${fileData.progress}%`"
-                                                    ></div>
-                                                </div>
-                                                <div class="flex justify-between mt-1.5">
-                                                    <span class="text-xs font-medium text-gray-700 dark:text-gray-300"
-                                                          x-text="`${fileData.progress}%`"></span>
-                                                    <span x-show="fileData.status === 'uploading' && fileData.speed > 0"
-                                                          class="text-xs text-gray-500 dark:text-gray-400"
-                                                          x-text="formatSpeed(fileData.speed)"></span>
-                                                </div>
+                                        <div x-show="fileData.status === 'uploading' || fileData.status === 'complete'" class="min-w-[150px]">
+                                            <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden dark:bg-gray-700">
+                                                <div
+                                                    class="h-2 rounded-full transition-[width] duration-300 ease-out"
+                                                    :class="fileData.status === 'complete' ? 'bg-success-600 dark:bg-success-500' : 'bg-primary-600 dark:bg-primary-500'"
+                                                    :style="`width: ${fileData.progress}%`"
+                                                ></div>
                                             </div>
-                                            <span x-show="fileData.status === 'pending'"
-                                                  class="text-sm text-gray-500 dark:text-gray-400">—</span>
+                                            <div class="flex justify-between mt-1 text-xs">
+                                                <span class="font-medium text-gray-700 dark:text-gray-300" x-text="`${fileData.progress}%`"></span>
+                                                <span x-show="fileData.status === 'uploading' && fileData.speed > 0"
+                                                      class="text-gray-500 dark:text-gray-400"
+                                                      x-text="formatSpeed(fileData.speed)"></span>
+                                            </div>
                                         </div>
+                                        <span x-show="fileData.status === 'pending'" class="text-sm text-gray-500 dark:text-gray-400">—</span>
                                     </td>
 
                                     <!-- Status -->
                                     <td class="px-3 py-4 sm:px-6">
                                         <span x-show="fileData.status === 'pending'"
-                                              class="fi-badge flex items-center justify-center gap-x-1 rounded-md text-xs font-medium ring-1 ring-inset px-2 min-w-[theme(spacing.6)] py-1 fi-color-gray fi-badge-color-gray bg-gray-50 text-gray-600 ring-gray-600/10 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">
-                                            <span class="fi-badge-label">Pending</span>
+                                              class="inline-flex items-center gap-x-1 rounded-md text-xs font-medium ring-1 ring-inset px-1.5 py-0.5 bg-gray-50 text-gray-600 ring-gray-600/10 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">
+                                            Pending
                                         </span>
                                         <span x-show="fileData.status === 'uploading'"
-                                              class="fi-badge flex items-center justify-center gap-x-1 rounded-md text-xs font-medium ring-1 ring-inset px-2 min-w-[theme(spacing.6)] py-1 fi-color-info fi-badge-color-info bg-info-50 text-info-700 ring-info-600/10 dark:bg-info-400/10 dark:text-info-400 dark:ring-info-400/30">
-                                            <svg class="animate-spin -ms-0.5 me-0.5 size-3.5" fill="none"
-                                                 viewBox="0 0 24 24">
-                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
-                                                        stroke-width="4"></circle>
-                                                <path class="opacity-75" fill="currentColor"
-                                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                              class="inline-flex items-center gap-x-1 rounded-md text-xs font-medium ring-1 ring-inset px-1.5 py-0.5 bg-info-50 text-info-700 ring-info-600/10 dark:bg-info-400/10 dark:text-info-400 dark:ring-info-400/30">
+                                            <svg class="animate-spin size-3" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                             </svg>
-                                            <span class="fi-badge-label">Uploading</span>
+                                            Uploading
                                         </span>
                                         <span x-show="fileData.status === 'complete'"
-                                              class="fi-badge flex items-center justify-center gap-x-1 rounded-md text-xs font-medium ring-1 ring-inset px-2 min-w-[theme(spacing.6)] py-1 fi-color-success fi-badge-color-success bg-success-50 text-success-700 ring-success-600/10 dark:bg-success-400/10 dark:text-success-400 dark:ring-success-400/30">
-                                            <svg class="-ms-0.5 me-0.5 size-3.5" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd"
-                                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                                      clip-rule="evenodd" />
+                                              class="inline-flex items-center gap-x-1 rounded-md text-xs font-medium ring-1 ring-inset px-1.5 py-0.5 bg-success-50 text-success-700 ring-success-600/10 dark:bg-success-400/10 dark:text-success-400 dark:ring-success-400/30">
+                                            <svg class="size-3" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                                             </svg>
-                                            <span class="fi-badge-label">Complete</span>
+                                            Complete
                                         </span>
                                         <span x-show="fileData.status === 'error'"
-                                              class="fi-badge flex items-center justify-center gap-x-1 rounded-md text-xs font-medium ring-1 ring-inset px-2 min-w-[theme(spacing.6)] py-1 fi-color-danger fi-badge-color-danger bg-danger-50 text-danger-700 ring-danger-600/10 dark:bg-danger-400/10 dark:text-danger-400 dark:ring-danger-400/30">
-                                            <svg class="-ms-0.5 me-0.5 size-3.5" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd"
-                                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                                                      clip-rule="evenodd" />
+                                              class="inline-flex items-center gap-x-1 rounded-md text-xs font-medium ring-1 ring-inset px-1.5 py-0.5 bg-danger-50 text-danger-700 ring-danger-600/10 dark:bg-danger-400/10 dark:text-danger-400 dark:ring-danger-400/30">
+                                            <svg class="size-3" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
                                             </svg>
-                                            <span class="fi-badge-label">Failed</span>
+                                            Failed
                                         </span>
                                     </td>
                                 </tr>
