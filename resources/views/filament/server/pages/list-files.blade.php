@@ -72,19 +72,15 @@
                         });
                     }
 
-                    // Get upload URL once for all files (token stays valid for connection)
-                    const uploadUrl = await $wire.getUploadUrl();
-                    const baseUrl = new URL(uploadUrl);
-                    baseUrl.searchParams.append('directory', @js($this->path));
-
                     // Upload files concurrently (max 3 at a time)
+                    // Each file gets its own token
                     const maxConcurrent = 3;
                     let activeUploads = [];
                     let completedCount = 0;
 
                     for (let i = 0; i < files.length; i++) {
-                        // Start upload
-                        const uploadPromise = this.uploadFile(i, baseUrl.toString())
+                        // Start upload (will get its own token)
+                        const uploadPromise = this.uploadFile(i)
                             .then(() => {
                                 completedCount++;
                                 this.currentFileIndex = completedCount;
@@ -150,62 +146,73 @@
                     }, 2000);
                 }
             },
-            async uploadFile(index, uploadUrl) {
+            async uploadFile(index) {
                 const fileData = this.uploadQueue[index];
                 fileData.status = 'uploading';
 
-                return new Promise((resolve, reject) => {
-                    const xhr = new XMLHttpRequest();
-                    const formData = new FormData();
-                    formData.append('files', fileData.file);
+                try {
+                    // Get a fresh token for this file
+                    const uploadUrl = await $wire.getUploadUrl();
+                    const url = new URL(uploadUrl);
+                    url.searchParams.append('directory', @js($this->path));
 
-                    let lastLoaded = 0;
-                    let lastTime = Date.now();
+                    return new Promise((resolve, reject) => {
+                        const xhr = new XMLHttpRequest();
+                        const formData = new FormData();
+                        formData.append('files', fileData.file);
 
-                    xhr.upload.addEventListener('progress', (e) => {
-                        if (e.lengthComputable) {
-                            fileData.uploadedBytes = e.loaded;
-                            fileData.progress = Math.round((e.loaded / e.total) * 100);
+                        let lastLoaded = 0;
+                        let lastTime = Date.now();
 
-                            // Calculate upload speed
-                            const currentTime = Date.now();
-                            const timeDiff = (currentTime - lastTime) / 1000;
-                            if (timeDiff > 0.1) {
-                                const bytesDiff = e.loaded - lastLoaded;
-                                fileData.speed = bytesDiff / timeDiff;
-                                lastTime = currentTime;
-                                lastLoaded = e.loaded;
+                        xhr.upload.addEventListener('progress', (e) => {
+                            if (e.lengthComputable) {
+                                fileData.uploadedBytes = e.loaded;
+                                fileData.progress = Math.round((e.loaded / e.total) * 100);
+
+                                // Calculate upload speed
+                                const currentTime = Date.now();
+                                const timeDiff = (currentTime - lastTime) / 1000;
+                                if (timeDiff > 0.1) {
+                                    const bytesDiff = e.loaded - lastLoaded;
+                                    fileData.speed = bytesDiff / timeDiff;
+                                    lastTime = currentTime;
+                                    lastLoaded = e.loaded;
+                                }
                             }
-                        }
-                    });
+                        });
 
-                    xhr.addEventListener('load', () => {
-                        if (xhr.status >= 200 && xhr.status < 300) {
-                            fileData.status = 'complete';
-                            fileData.progress = 100;
-                            resolve();
-                        } else {
+                        xhr.addEventListener('load', () => {
+                            if (xhr.status >= 200 && xhr.status < 300) {
+                                fileData.status = 'complete';
+                                fileData.progress = 100;
+                                resolve();
+                            } else {
+                                fileData.status = 'error';
+                                fileData.error = `Upload failed (${xhr.status})`;
+                                reject(new Error(fileData.error));
+                            }
+                        });
+
+                        xhr.addEventListener('error', () => {
                             fileData.status = 'error';
-                            fileData.error = `Upload failed (${xhr.status})`;
-                            reject(new Error(fileData.error));
-                        }
-                    });
+                            fileData.error = 'Network error';
+                            reject(new Error('Upload failed'));
+                        });
 
-                    xhr.addEventListener('error', () => {
-                        fileData.status = 'error';
-                        fileData.error = 'Network error';
-                        reject(new Error('Upload failed'));
-                    });
+                        xhr.addEventListener('abort', () => {
+                            fileData.status = 'error';
+                            fileData.error = 'Upload cancelled';
+                            reject(new Error('Upload aborted'));
+                        });
 
-                    xhr.addEventListener('abort', () => {
-                        fileData.status = 'error';
-                        fileData.error = 'Upload cancelled';
-                        reject(new Error('Upload aborted'));
+                        xhr.open('POST', url.toString());
+                        xhr.send(formData);
                     });
-
-                    xhr.open('POST', uploadUrl);
-                    xhr.send(formData);
-                });
+                } catch (error) {
+                    fileData.status = 'error';
+                    fileData.error = 'Failed to get upload token';
+                    throw error;
+                }
             },
             formatBytes(bytes) {
                 if (bytes === 0) return '0 B';
