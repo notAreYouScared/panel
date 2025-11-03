@@ -55,14 +55,14 @@
             },
             async extractFilesFromItems(items) {
                 const filesWithPaths = [];
-                
+
                 for (let i = 0; i < items.length; i++) {
                     const item = items[i].webkitGetAsEntry();
                     if (item) {
                         await this.traverseFileTree(item, '', filesWithPaths);
                     }
                 }
-                
+
                 return filesWithPaths;
             },
 
@@ -78,7 +78,7 @@
                     const entries = await new Promise((resolve) => {
                         dirReader.readEntries(resolve);
                     });
-                    
+
                     for (let i = 0; i < entries.length; i++) {
                         await this.traverseFileTree(
                             entries[i],
@@ -198,7 +198,7 @@
                     if (this.autoCloseTimer) {
                         clearTimeout(this.autoCloseTimer);
                     }
-                    
+
                     this.autoCloseTimer = setTimeout(() => {
                         this.isUploading = false;
                         this.uploadQueue = [];
@@ -306,11 +306,21 @@
             async uploadFile(index) {
                 const fileData = this.uploadQueue[index];
                 fileData.status = 'uploading';
-
                 try {
                     const uploadUrl = await $wire.getUploadUrl();
                     const url = new URL(uploadUrl);
-                    url.searchParams.append('directory', @js($this->path));
+
+                    // Base directory from Livewire
+                    let basePath = @js($this->path);
+
+                    // If this file has a relative folder path, append it
+                    if (fileData.path && fileData.path.trim() !== '') {
+                        // Ensure no double slashes and proper trailing slash
+                        basePath = basePath.replace(/\/+$/, '') + '/' + fileData.path.replace(/^\/+/, '');
+                    }
+
+                    // Add the directory param to the URL
+                    url.searchParams.append('directory', basePath);
 
                     return new Promise((resolve, reject) => {
                         const xhr = new XMLHttpRequest();
