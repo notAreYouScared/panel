@@ -667,6 +667,27 @@ class ListFiles extends ListRecords
         return $server->node->upload_size * 1024 * 1024;
     }
 
+    public function createFolder(string $folderPath): void
+    {
+        /** @var Server $server */
+        $server = Filament::getTenant();
+
+        // Check if user has permission to create folders
+        if (!user()?->can(Permission::ACTION_FILE_CREATE, $server)) {
+            abort(403, 'You do not have permission to create folders.');
+        }
+
+        try {
+            $this->getDaemonFileRepository()->createDirectory($folderPath, $this->path);
+
+            Activity::event('server:file.create-directory')
+                ->property(['directory' => $this->path, 'name' => $folderPath])
+                ->log();
+        } catch (FileExistsException) {
+            // Folder already exists, silently continue
+        }
+    }
+
     private function getDaemonFileRepository(): DaemonFileRepository
     {
         /** @var Server $server */

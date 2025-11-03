@@ -44,11 +44,175 @@
                 this.isDragging = false;
                 this.dragCounter = 0;
 
-                const files = e.dataTransfer.files;
-                if (files.length === 0) return;
+                const items = e.dataTransfer.items;
+                if (!items || items.length === 0) return;
 
-                await this.uploadFiles(files);
+                // Extract all files including those in folders
+                const filesWithPaths = await this.extractFilesFromItems(items);
+                if (filesWithPaths.length === 0) return;
+
+                await this.uploadFilesWithFolders(filesWithPaths);
             },
+            async extractFilesFromItems(items) {
+                const filesWithPaths = [];
+                
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i].webkitGetAsEntry();
+                    if (item) {
+                        await this.traverseFileTree(item, '', filesWithPaths);
+                    }
+                }
+                
+                return filesWithPaths;
+            },
+
+            async traverseFileTree(item, path, filesWithPaths) {
+                if (item.isFile) {
+                    const file = await new Promise((resolve) => item.file(resolve));
+                    filesWithPaths.push({
+                        file: file,
+                        path: path
+                    });
+                } else if (item.isDirectory) {
+                    const dirReader = item.createReader();
+                    const entries = await new Promise((resolve) => {
+                        dirReader.readEntries(resolve);
+                    });
+                    
+                    for (let i = 0; i < entries.length; i++) {
+                        await this.traverseFileTree(
+                            entries[i],
+                            path + item.name + '/',
+                            filesWithPaths
+                        );
+                    }
+                }
+            },
+
+            async uploadFilesWithFolders(filesWithPaths) {
+                this.isUploading = true;
+                this.uploadQueue = [];
+                this.totalFiles = filesWithPaths.length;
+                this.currentFileIndex = 0;
+
+                try {
+                    const uploadSizeLimit = await $wire.getUploadSizeLimit();
+
+                    // Validate file sizes
+                    for (let i = 0; i < filesWithPaths.length; i++) {
+                        if (filesWithPaths[i].file.size > uploadSizeLimit) {
+                            new window.FilamentNotification()
+                                .title(`File ${filesWithPaths[i].file.name} exceeds the upload size limit of ${this.formatBytes(uploadSizeLimit)}`)
+                                .danger()
+                                .send();
+                            this.isUploading = false;
+                            return;
+                        }
+                    }
+
+                    // Extract unique folder paths and create them
+                    const folderPaths = new Set();
+                    for (let i = 0; i < filesWithPaths.length; i++) {
+                        if (filesWithPaths[i].path) {
+                            const parts = filesWithPaths[i].path.split('/').filter(p => p);
+                            let currentPath = '';
+                            for (let j = 0; j < parts.length; j++) {
+                                currentPath += parts[j] + '/';
+                                folderPaths.add(currentPath);
+                            }
+                        }
+                    }
+
+                    // Create folders first
+                    for (const folderPath of folderPaths) {
+                        try {
+                            await $wire.createFolder(folderPath.slice(0, -1)); // Remove trailing slash
+                        } catch (error) {
+                            console.error(`Failed to create folder ${folderPath}:`, error);
+                        }
+                    }
+
+                    // Add files to upload queue
+                    for (let i = 0; i < filesWithPaths.length; i++) {
+                        this.uploadQueue.push({
+                            file: filesWithPaths[i].file,
+                            name: filesWithPaths[i].file.name,
+                            path: filesWithPaths[i].path,
+                            size: filesWithPaths[i].file.size,
+                            progress: 0,
+                            speed: 0,
+                            uploadedBytes: 0,
+                            status: 'pending',
+                            error: null
+                        });
+                    }
+
+                    const maxConcurrent = 3;
+                    let activeUploads = [];
+                    let completedCount = 0;
+
+                    for (let i = 0; i < filesWithPaths.length; i++) {
+                        const uploadPromise = this.uploadFile(i)
+                            .then(() => {
+                                completedCount++;
+                                this.currentFileIndex = completedCount;
+                            })
+                            .catch((error) => {
+                                completedCount++;
+                                this.currentFileIndex = completedCount;
+                            });
+
+                        activeUploads.push(uploadPromise);
+
+                        if (activeUploads.length >= maxConcurrent) {
+                            await Promise.race(activeUploads);
+                            activeUploads = activeUploads.filter(p => {
+                                let isPending = true;
+                                p.then(() => { isPending = false; }).catch(() => { isPending = false; });
+                                return isPending;
+                            });
+                        }
+                    }
+
+                    await Promise.allSettled(activeUploads);
+                    const failedUploads = this.uploadQueue.filter(f => f.status === 'error');
+                    await $wire.$refresh();
+
+                    if (failedUploads.length === 0) {
+                        new window.FilamentNotification()
+                            .title('{{ trans('server/file.actions.upload.success') }}')
+                            .success()
+                            .send();
+                    } else if (failedUploads.length === this.totalFiles) {
+                        new window.FilamentNotification()
+                            .title('{{ trans('server/file.actions.upload.error_all') }}')
+                            .danger()
+                            .send();
+                    } else {
+                        new window.FilamentNotification()
+                            .title(`{{ trans('server/file.actions.upload.error_partial') }}`)
+                            .warning()
+                            .send();
+                    }
+
+                    if (this.autoCloseTimer) {
+                        clearTimeout(this.autoCloseTimer);
+                    }
+                    
+                    this.autoCloseTimer = setTimeout(() => {
+                        this.isUploading = false;
+                        this.uploadQueue = [];
+                    }, 5000);
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    new window.FilamentNotification()
+                        .title('{{ trans('server/file.actions.upload.error') }}')
+                        .danger()
+                        .send();
+                    this.isUploading = false;
+                }
+            },
+
             async uploadFiles(files) {
                 this.isUploading = true;
                 this.uploadQueue = [];
