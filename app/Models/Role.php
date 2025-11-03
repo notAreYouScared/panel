@@ -52,6 +52,9 @@ class Role extends BaseRole
         'panelLog' => [
             'view',
         ],
+        'adminActivityLog' => [
+            'view',
+        ],
     ];
 
     /** @var array<string, array<string>> */
