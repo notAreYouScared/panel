@@ -37,9 +37,17 @@ class AdminActivityLogResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'event';
 
+    protected static ?int $navigationSort = 99;
+
     public static function getNavigationLabel(): string
     {
         return trans('admin/admin_activity.nav_title');
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        $count = static::getModel()::count();
+        return $count > 0 ? number_format($count) : null;
     }
 
     public static function getModelLabel(): string
