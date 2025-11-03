@@ -185,10 +185,6 @@ class AdminActivityLogResource extends Resource
             ->orderBy('timestamp', 'desc');
     }
 
-    public static function canViewAny(): bool
-    {
-        return user()?->can('view adminActivityLog');
-    }
 
     /** @return array<string, PageRegistration> */
     public static function getDefaultPages(): array
