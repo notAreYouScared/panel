@@ -65,26 +65,6 @@ class AdminActivityLogResource extends Resource
         return trans('admin/dashboard.advanced');
     }
 
-    public static function canCreate(): bool
-    {
-        return false;
-    }
-
-    public static function canEdit($record): bool
-    {
-        return false;
-    }
-
-    public static function canDelete($record): bool
-    {
-        return false;
-    }
-
-    public static function canDeleteAny(): bool
-    {
-        return false;
-    }
-
     /**
      * @throws Exception
      */
