@@ -418,8 +418,8 @@ class PluginService
         $tmpDir = TemporaryDirectory::make()->deleteWhenDestroyed();
         $pluginDir = $tmpDir->path($pluginName);
 
-        // Create plugin directory
-        if (!File::makeDirectory($pluginDir, 0755, true)) {
+        // Create plugin directory if it doesn't exist
+        if (!File::exists($pluginDir) && !File::makeDirectory($pluginDir, 0755, true)) {
             throw new InvalidFileUploadException('Could not create temporary directory.');
         }
 
@@ -502,8 +502,8 @@ class PluginService
                     throw new InvalidFileUploadException('Invalid directory path in GitHub API response.');
                 }
 
-                // Create directory and recurse
-                if (!File::makeDirectory($itemPath, 0755, true)) {
+                // Create directory if it doesn't exist and recurse
+                if (!File::exists($itemPath) && !File::makeDirectory($itemPath, 0755, true)) {
                     throw new InvalidFileUploadException("Could not create directory: {$item['name']}");
                 }
 
