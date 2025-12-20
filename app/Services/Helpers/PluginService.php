@@ -468,9 +468,19 @@ class PluginService
         }
 
         foreach ($contents as $item) {
+            // Validate item name to prevent path traversal attacks
+            if (!isset($item['name']) || Str::contains($item['name'], '..') || Str::startsWith($item['name'], '/')) {
+                throw new InvalidFileUploadException('GitHub response contains invalid path traversal sequences.');
+            }
+
             $itemPath = $localPath . '/' . $item['name'];
 
             if ($item['type'] === 'file') {
+                // Validate download URL to ensure it's from GitHub
+                if (!isset($item['download_url']) || !Str::startsWith($item['download_url'], 'https://raw.githubusercontent.com/')) {
+                    throw new InvalidFileUploadException('Invalid file download URL from GitHub API.');
+                }
+
                 // Download file content
                 $fileContent = Http::timeout(30)->connectTimeout(5)->throw()->get($item['download_url'])->body();
 
@@ -487,6 +497,11 @@ class PluginService
                     throw new InvalidFileUploadException("Could not write file: {$item['name']}");
                 }
             } elseif ($item['type'] === 'dir') {
+                // Validate that path is properly set for directories
+                if (!isset($item['path'])) {
+                    throw new InvalidFileUploadException('Invalid directory path in GitHub API response.');
+                }
+
                 // Create directory and recurse
                 if (!File::makeDirectory($itemPath, 0755, true)) {
                     throw new InvalidFileUploadException("Could not create directory: {$item['name']}");
