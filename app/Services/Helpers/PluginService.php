@@ -423,8 +423,12 @@ class PluginService
             throw new InvalidFileUploadException('Could not create temporary directory.');
         }
 
+        // Track total downloaded size
+        $totalSize = 0;
+        $maxSize = config('panel.plugin.max_import_size');
+
         // Download folder contents recursively
-        $this->downloadGitHubFolder($owner, $repo, $branch, $path, $pluginDir);
+        $this->downloadGitHubFolder($owner, $repo, $branch, $path, $pluginDir, $totalSize, $maxSize);
 
         // Create a zip file
         $zipPath = $tmpDir->path($pluginName . '.zip');
@@ -447,7 +451,7 @@ class PluginService
         $this->downloadPluginFromFile(new UploadedFile($zipPath, $pluginName . '.zip', 'application/zip'), $cleanDownload);
     }
 
-    private function downloadGitHubFolder(string $owner, string $repo, string $branch, string $path, string $localPath): void
+    private function downloadGitHubFolder(string $owner, string $repo, string $branch, string $path, string $localPath, int &$totalSize, int $maxSize): void
     {
         // GitHub API endpoint to get folder contents
         $apiUrl = "https://api.github.com/repos/{$owner}/{$repo}/contents/{$path}?ref={$branch}";
@@ -470,10 +474,13 @@ class PluginService
                 // Download file content
                 $fileContent = Http::timeout(30)->connectTimeout(5)->throw()->get($item['download_url'])->body();
 
-                // Validate total size accumulated
-                $maxSize = config('panel.plugin.max_import_size');
-                if (strlen($fileContent) > $maxSize) {
-                    throw new InvalidFileUploadException("File too large: {$item['name']} ($maxSize MiB)");
+                // Track cumulative size across all files
+                $fileSize = strlen($fileContent);
+                $totalSize += $fileSize;
+                
+                if ($totalSize > $maxSize) {
+                    $maxSizeMiB = round($maxSize / (1024 * 1024), 2);
+                    throw new InvalidFileUploadException("Total download size exceeds maximum allowed size of {$maxSizeMiB} MiB");
                 }
 
                 if (!file_put_contents($itemPath, $fileContent)) {
@@ -485,7 +492,7 @@ class PluginService
                     throw new InvalidFileUploadException("Could not create directory: {$item['name']}");
                 }
 
-                $this->downloadGitHubFolder($owner, $repo, $branch, $item['path'], $itemPath);
+                $this->downloadGitHubFolder($owner, $repo, $branch, $item['path'], $itemPath, $totalSize, $maxSize);
             }
         }
     }
