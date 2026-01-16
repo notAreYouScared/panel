@@ -114,11 +114,11 @@ class AdminActivityLogResource extends Resource
                     ->options(fn (Table $table) => $table->getQuery()->pluck('event', 'event')->unique()->sort())
                     ->searchable()
                     ->preload(),
-                SelectFilter::make('actor')
-                    ->label(trans('admin/activity.actor'))
-                    ->relationship('actor', 'username')
-                    ->searchable()
-                    ->preload(),
+//                SelectFilter::make('actor')
+//                    ->label(trans('admin/activity.actor'))
+//                    ->relationship('actor', 'username')
+//                    ->searchable()
+//                    ->preload(),
             ]);
     }
 
