@@ -124,8 +124,16 @@ class AdminActivityLog extends Model implements HasIcon, HasLabel
     public function getLabel(): string
     {
         $properties = $this->wrapProperties();
-
-        return trans_choice('admin/activity.'.str($this->event)->replace(':', '.'), array_key_exists('count', $properties) ? $properties['count'] : 1, $properties);
+        
+        $translationKey = 'admin/activity.'.str($this->event)->replace(':', '.');
+        $translated = trans_choice($translationKey, array_key_exists('count', $properties) ? $properties['count'] : 1, $properties);
+        
+        // If translation is missing, return the event name as fallback
+        if ($translated === $translationKey) {
+            return str($this->event)->title()->replace(':', ' ')->replace('-', ' ')->toString();
+        }
+        
+        return $translated;
     }
 
     /**

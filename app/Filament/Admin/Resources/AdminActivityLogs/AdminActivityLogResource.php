@@ -7,6 +7,7 @@ use App\Filament\Components\Tables\Columns\DateTimeColumn;
 use App\Models\AdminActivityLog;
 use App\Models\User;
 use App\Traits\Filament\CanCustomizePages;
+use App\Traits\Filament\CanModifyTable;
 use Exception;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DateTimePicker;
@@ -26,6 +27,7 @@ use Illuminate\Support\HtmlString;
 class AdminActivityLogResource extends Resource
 {
     use CanCustomizePages;
+    use CanModifyTable;
 
     protected static ?string $model = AdminActivityLog::class;
 
