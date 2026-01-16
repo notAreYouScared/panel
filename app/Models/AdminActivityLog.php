@@ -9,7 +9,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use LogicException;
 
 /**
@@ -146,6 +148,14 @@ class AdminActivityLog extends Model implements HasIcon, HasLabel
         }
 
         $properties = $this->properties->mapWithKeys(function ($value, $key) {
+            // Handle old/new value structure for change tracking
+            if (is_array($value) && isset($value['old']) && isset($value['new'])) {
+                return [
+                    "{$key}_old" => is_scalar($value['old']) ? str($value['old'])->stripTags()->toString() : json_encode($value['old']),
+                    "{$key}_new" => is_scalar($value['new']) ? str($value['new'])->stripTags()->toString() : json_encode($value['new']),
+                ];
+            }
+
             if (!is_array($value)) {
                 return [$key => str($value)->stripTags()->toString()];
             }

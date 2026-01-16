@@ -1180,11 +1180,22 @@ class EditServer extends EditRecord
         $changed = collect($server->getChanges())->except(['updated_at', 'name', 'owner_id', 'condition', 'description', 'external_id', 'tags', 'cpu_pinning', 'allocation_limit', 'database_limit', 'backup_limit', 'skip_scripts'])->all();
 
         // Log server update
-        if (!empty($server->getChanges())) {
+        $changes = $server->getChanges();
+        if (!empty($changes)) {
+            // Prepare detailed change log with old and new values
+            $changeDetails = [];
+            foreach ($changes as $key => $newValue) {
+                $oldValue = $server->getOriginal($key);
+                $changeDetails[$key] = [
+                    'old' => $oldValue,
+                    'new' => $newValue,
+                ];
+            }
+
             AdminActivity::event('server:updated')
                 ->subject($server)
                 ->property('name', $server->name)
-                ->properties($server->getChanges())
+                ->properties($changeDetails)
                 ->withRequestMetadata()
                 ->log();
         }

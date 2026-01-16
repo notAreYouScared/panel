@@ -839,11 +839,22 @@ class EditNode extends EditRecord
         $changed = collect($node->getChanges())->except(['updated_at', 'name', 'tags', 'public', 'maintenance_mode', 'memory', 'memory_overallocate', 'disk', 'disk_overallocate', 'cpu', 'cpu_overallocate'])->all();
 
         // Log node update
-        if (!empty($node->getChanges())) {
+        $changes = $node->getChanges();
+        if (!empty($changes)) {
+            // Prepare detailed change log with old and new values
+            $changeDetails = [];
+            foreach ($changes as $key => $newValue) {
+                $oldValue = $node->getOriginal($key);
+                $changeDetails[$key] = [
+                    'old' => $oldValue,
+                    'new' => $newValue,
+                ];
+            }
+
             AdminActivity::event('node:updated')
                 ->subject($node)
                 ->property('name', $node->name)
-                ->properties($node->getChanges())
+                ->properties($changeDetails)
                 ->withRequestMetadata()
                 ->log();
         }

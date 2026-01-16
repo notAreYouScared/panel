@@ -516,11 +516,22 @@ class EditEgg extends EditRecord
         $egg = $this->record;
 
         // Log egg update
-        if (!empty($egg->getChanges())) {
+        $changes = $egg->getChanges();
+        if (!empty($changes)) {
+            // Prepare detailed change log with old and new values
+            $changeDetails = [];
+            foreach ($changes as $key => $newValue) {
+                $oldValue = $egg->getOriginal($key);
+                $changeDetails[$key] = [
+                    'old' => $oldValue,
+                    'new' => $newValue,
+                ];
+            }
+
             AdminActivity::event('egg:updated')
                 ->subject($egg)
                 ->property('name', $egg->name)
-                ->properties($egg->getChanges())
+                ->properties($changeDetails)
                 ->withRequestMetadata()
                 ->log();
         }
