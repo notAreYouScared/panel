@@ -21,9 +21,6 @@ return new class extends Migration
             $table->json('properties')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamp('timestamp')->useCurrent()->index();
-
-            $table->index(['actor_type', 'actor_id']);
-            $table->index(['subject_type', 'subject_id']);
         });
     }
 
