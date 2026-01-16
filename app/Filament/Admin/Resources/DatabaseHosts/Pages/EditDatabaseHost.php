@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\DatabaseHosts\Pages;
 
+use App\Facades\AdminActivity;
 use App\Filament\Admin\Resources\DatabaseHosts\DatabaseHostResource;
 use App\Models\DatabaseHost;
 use App\Services\Databases\Hosts\HostUpdateService;
@@ -38,6 +39,13 @@ class EditDatabaseHost extends EditRecord
             DeleteAction::make()
                 ->label(fn (DatabaseHost $databaseHost) => $databaseHost->databases()->count() > 0 ? trans('admin/databasehost.delete_help') : trans('filament-actions::delete.single.modal.actions.delete.label'))
                 ->disabled(fn (DatabaseHost $databaseHost) => $databaseHost->databases()->count() > 0)
+                ->after(function (DatabaseHost $databaseHost) {
+                    AdminActivity::event('database-host:deleted')
+                        ->property('name', $databaseHost->name)
+                        ->property('id', $databaseHost->id)
+                        ->withRequestMetadata()
+                        ->log();
+                })
                 ->iconButton()->iconSize(IconSize::ExtraLarge),
             $this->getSaveFormAction()->formId('form')
                 ->iconButton()->iconSize(IconSize::ExtraLarge)
@@ -56,8 +64,22 @@ class EditDatabaseHost extends EditRecord
             return $record;
         }
 
+        $originalName = $record->name;
+
         try {
-            return $this->hostUpdateService->handle($record, $data);
+            $host = $this->hostUpdateService->handle($record, $data);
+
+            // Log database host update
+            if (!empty($host->getChanges())) {
+                AdminActivity::event('database-host:updated')
+                    ->subject($host)
+                    ->property('name', $host->name)
+                    ->properties($host->getChanges())
+                    ->withRequestMetadata()
+                    ->log();
+            }
+
+            return $host;
         } catch (PDOException $exception) {
             Notification::make()
                 ->title(trans('admin/databasehost.error'))

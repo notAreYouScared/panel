@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\DatabaseHosts\Pages;
 
+use App\Facades\AdminActivity;
 use App\Filament\Admin\Resources\DatabaseHosts\DatabaseHostResource;
 use App\Services\Databases\Hosts\HostCreationService;
 use App\Traits\Filament\CanCustomizeHeaderActions;
@@ -169,7 +170,16 @@ class CreateDatabaseHost extends CreateRecord
     protected function handleRecordCreation(array $data): Model
     {
         try {
-            return $this->service->handle($data);
+            $host = $this->service->handle($data);
+
+            AdminActivity::event('database-host:created')
+                ->subject($host)
+                ->property('name', $host->name)
+                ->property('host', $host->host)
+                ->withRequestMetadata()
+                ->log();
+
+            return $host;
         } catch (PDOException $exception) {
             Notification::make()
                 ->title(trans('admin/databasehost.error'))

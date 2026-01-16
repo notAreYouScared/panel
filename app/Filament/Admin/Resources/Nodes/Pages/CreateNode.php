@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Nodes\Pages;
 
+use App\Facades\AdminActivity;
 use App\Filament\Admin\Resources\Nodes\NodeResource;
 use App\Models\Node;
 use App\Traits\Filament\CanCustomizeHeaderActions;
@@ -437,5 +438,23 @@ class CreateNode extends CreateRecord
         }
 
         return $data;
+    }
+
+    protected function afterCreate(): void
+    {
+        /** @var Node $node */
+        $node = $this->record;
+
+        AdminActivity::event('node:created')
+            ->subject($node)
+            ->property('name', $node->name)
+            ->properties([
+                'fqdn' => $node->fqdn,
+                'scheme' => $node->scheme,
+                'memory' => $node->memory,
+                'disk' => $node->disk,
+            ])
+            ->withRequestMetadata()
+            ->log();
     }
 }

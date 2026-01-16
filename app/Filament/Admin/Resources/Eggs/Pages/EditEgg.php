@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Eggs\Pages;
 
 use App\Enums\EditorLanguages;
+use App\Facades\AdminActivity;
 use App\Filament\Admin\Resources\Eggs\EggResource;
 use App\Filament\Components\Actions\ExportEggAction;
 use App\Filament\Components\Actions\ImportEggAction;
@@ -451,6 +452,13 @@ class EditEgg extends EditRecord
                     ->title(trans('admin/egg.delete_failed'))
                     ->body(trans('admin/egg.could_not_delete', ['egg' => $egg->name]))
                 )
+                ->after(function (Egg $egg) {
+                    AdminActivity::event('egg:deleted')
+                        ->property('name', $egg->name)
+                        ->property('id', $egg->id)
+                        ->withRequestMetadata()
+                        ->log();
+                })
                 ->iconButton()->iconSize(IconSize::ExtraLarge),
             ExportEggAction::make(),
             ImportEggAction::make()
@@ -500,5 +508,21 @@ class EditEgg extends EditRecord
     protected function getFormActions(): array
     {
         return [];
+    }
+
+    protected function afterSave(): void
+    {
+        /** @var Egg $egg */
+        $egg = $this->record;
+
+        // Log egg update
+        if (!empty($egg->getChanges())) {
+            AdminActivity::event('egg:updated')
+                ->subject($egg)
+                ->property('name', $egg->name)
+                ->properties($egg->getChanges())
+                ->withRequestMetadata()
+                ->log();
+        }
     }
 }
