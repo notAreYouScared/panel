@@ -64,26 +64,17 @@ class EditDatabaseHost extends EditRecord
             return $record;
         }
 
+        $originalName = $record->name;
+
         try {
             $host = $this->hostUpdateService->handle($record, $data);
 
             // Log database host update
-            $changes = $host->getChanges();
-            if (!empty($changes)) {
-                // Prepare detailed change log with old and new values
-                $changeDetails = [];
-                foreach ($changes as $key => $newValue) {
-                    $oldValue = $host->getOriginal($key);
-                    $changeDetails[$key] = [
-                        'old' => $oldValue,
-                        'new' => $newValue,
-                    ];
-                }
-
+            if (!empty($host->getChanges())) {
                 AdminActivity::event('database-host:updated')
                     ->subject($host)
                     ->property('name', $host->name)
-                    ->properties($changeDetails)
+                    ->properties($host->getChanges())
                     ->withRequestMetadata()
                     ->log();
             }
