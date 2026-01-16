@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Servers\Pages;
 
 use App\Enums\SuspendAction;
+use App\Facades\AdminActivity;
 use App\Filament\Admin\Resources\Servers\ServerResource;
 use App\Filament\Components\Actions\DeleteServerIcon;
 use App\Filament\Components\Actions\PreviewStartupAction;
@@ -862,6 +863,12 @@ class EditServer extends EditRecord
                                                                 try {
                                                                     $reinstallService->handle($server);
 
+                                                                    AdminActivity::event('server:reinstalled')
+                                                                        ->subject($server)
+                                                                        ->property('name', $server->name)
+                                                                        ->withRequestMetadata()
+                                                                        ->log();
+
                                                                     Notification::make()
                                                                         ->title(trans('admin/server.notifications.reinstall_started'))
                                                                         ->success()
@@ -909,6 +916,12 @@ class EditServer extends EditRecord
                                                             try {
                                                                 $suspensionService->handle($server, SuspendAction::Suspend);
 
+                                                                AdminActivity::event('server:suspended')
+                                                                    ->subject($server)
+                                                                    ->property('name', $server->name)
+                                                                    ->withRequestMetadata()
+                                                                    ->log();
+
                                                                 Notification::make()
                                                                     ->success()
                                                                     ->title(trans('admin/server.notifications.server_suspended'))
@@ -929,6 +942,12 @@ class EditServer extends EditRecord
                                                         ->action(function (SuspensionService $suspensionService, Server $server) {
                                                             try {
                                                                 $suspensionService->handle($server, SuspendAction::Unsuspend);
+
+                                                                AdminActivity::event('server:unsuspended')
+                                                                    ->subject($server)
+                                                                    ->property('name', $server->name)
+                                                                    ->withRequestMetadata()
+                                                                    ->log();
 
                                                                 Notification::make()
                                                                     ->success()
@@ -1073,8 +1092,15 @@ class EditServer extends EditRecord
                 ->modalSubmitActionLabel(trans('filament-actions::delete.single.label'))
                 ->requiresConfirmation()
                 ->action(function (Server $server, ServerDeletionService $service) {
+                    $serverName = $server->name;
                     try {
                         $service->handle($server);
+
+                        AdminActivity::event('server:deleted')
+                            ->property('name', $serverName)
+                            ->property('id', $server->id)
+                            ->withRequestMetadata()
+                            ->log();
 
                         return redirect(ListServers::getUrl(panel: 'admin'));
                     } catch (ConnectionException) {
@@ -1100,8 +1126,16 @@ class EditServer extends EditRecord
                 ->modalSubmitActionLabel(trans('filament-actions::force-delete.single.label'))
                 ->requiresConfirmation()
                 ->action(function (Server $server, ServerDeletionService $service) {
+                    $serverName = $server->name;
                     try {
                         $service->withForce()->handle($server);
+
+                        AdminActivity::event('server:deleted')
+                            ->property('name', $serverName)
+                            ->property('id', $server->id)
+                            ->property('forced', true)
+                            ->withRequestMetadata()
+                            ->log();
 
                         return redirect(ListServers::getUrl(panel: 'admin'));
                     } catch (ConnectionException) {
@@ -1144,6 +1178,16 @@ class EditServer extends EditRecord
         $server = $this->record;
 
         $changed = collect($server->getChanges())->except(['updated_at', 'name', 'owner_id', 'condition', 'description', 'external_id', 'tags', 'cpu_pinning', 'allocation_limit', 'database_limit', 'backup_limit', 'skip_scripts'])->all();
+
+        // Log server update
+        if (!empty($server->getChanges())) {
+            AdminActivity::event('server:updated')
+                ->subject($server)
+                ->property('name', $server->name)
+                ->properties($server->getChanges())
+                ->withRequestMetadata()
+                ->log();
+        }
 
         try {
             if ($changed) {

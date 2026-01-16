@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Servers\Pages;
 
+use App\Facades\AdminActivity;
 use App\Filament\Admin\Resources\Servers\ServerResource;
 use App\Filament\Components\Forms\Fields\StartupVariable;
 use App\Models\Allocation;
@@ -852,7 +853,20 @@ class CreateServer extends CreateRecord
         session()->put('last_utilized_node', $data['node_id']);
 
         try {
-            return $this->serverCreationService->handle($data);
+            $server = $this->serverCreationService->handle($data);
+
+            AdminActivity::event('server:created')
+                ->subject($server)
+                ->property('name', $server->name)
+                ->properties([
+                    'owner_id' => $server->owner_id,
+                    'node_id' => $server->node_id,
+                    'egg_id' => $server->egg_id,
+                ])
+                ->withRequestMetadata()
+                ->log();
+
+            return $server;
         } catch (Exception $exception) {
             Notification::make()
                 ->title(trans('admin/server.notifications.create_failed'))

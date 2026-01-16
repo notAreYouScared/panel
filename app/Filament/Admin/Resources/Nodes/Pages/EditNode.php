@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Nodes\Pages;
 
+use App\Facades\AdminActivity;
 use App\Filament\Admin\Resources\Nodes\NodeResource;
 use App\Models\Node;
 use App\Repositories\Daemon\DaemonSystemRepository;
@@ -805,6 +806,13 @@ class EditNode extends EditRecord
             DeleteAction::make()
                 ->disabled(fn (Node $node) => $node->servers()->count() > 0)
                 ->label(fn (Node $node) => $node->servers()->count() > 0 ? trans('admin/node.node_has_servers') : trans('filament-actions::delete.single.label'))
+                ->after(function (Node $node) {
+                    AdminActivity::event('node:deleted')
+                        ->property('name', $node->name)
+                        ->property('id', $node->id)
+                        ->withRequestMetadata()
+                        ->log();
+                })
                 ->iconButton()->iconSize(IconSize::ExtraLarge),
             $this->getSaveFormAction()->formId('form')
                 ->iconButton()->iconSize(IconSize::ExtraLarge)
@@ -829,6 +837,16 @@ class EditNode extends EditRecord
         $node = $this->record;
 
         $changed = collect($node->getChanges())->except(['updated_at', 'name', 'tags', 'public', 'maintenance_mode', 'memory', 'memory_overallocate', 'disk', 'disk_overallocate', 'cpu', 'cpu_overallocate'])->all();
+
+        // Log node update
+        if (!empty($node->getChanges())) {
+            AdminActivity::event('node:updated')
+                ->subject($node)
+                ->property('name', $node->name)
+                ->properties($node->getChanges())
+                ->withRequestMetadata()
+                ->log();
+        }
 
         try {
             if ($changed) {

@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Eggs\Pages;
 
 use App\Enums\EditorLanguages;
+use App\Facades\AdminActivity;
 use App\Filament\Admin\Resources\Eggs\EggResource;
 use App\Filament\Components\Forms\Fields\CopyFrom;
 use App\Filament\Components\Forms\Fields\MonacoEditor;
@@ -294,6 +295,14 @@ class CreateEgg extends CreateRecord
 
         logger()->info('new egg', $data);
 
-        return parent::handleRecordCreation($data);
+        $egg = parent::handleRecordCreation($data);
+
+        AdminActivity::event('egg:created')
+            ->subject($egg)
+            ->property('name', $egg->name)
+            ->withRequestMetadata()
+            ->log();
+
+        return $egg;
     }
 }

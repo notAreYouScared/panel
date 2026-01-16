@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Users\Pages;
 
+use App\Facades\AdminActivity;
 use App\Filament\Admin\Resources\Users\UserResource;
 use App\Models\Role;
 use App\Services\Users\UserCreationService;
@@ -62,6 +63,16 @@ class CreateUser extends CreateRecord
         $user = $this->service->handle($data);
 
         $user->syncRoles($roles);
+
+        AdminActivity::event('user:created')
+            ->subject($user)
+            ->property('username', $user->username)
+            ->property('email', $user->email)
+            ->properties([
+                'roles' => $roles->pluck('name')->join(', '),
+            ])
+            ->withRequestMetadata()
+            ->log();
 
         return $user;
     }
