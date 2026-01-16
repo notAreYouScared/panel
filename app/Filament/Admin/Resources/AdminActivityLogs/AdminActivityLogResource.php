@@ -23,7 +23,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\HtmlString;
 
-class AdminActivityResource extends Resource
+class AdminActivityLogResource extends Resource
 {
     use CanCustomizePages;
 
