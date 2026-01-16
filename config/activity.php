@@ -9,4 +9,8 @@ return [
     //
     // Activity will still be properly tracked, just not displayed.
     'hide_admin_activity' => env('APP_ACTIVITY_HIDE_ADMIN', false),
+
+    // The number of days elapsed before old admin activity log entries are deleted.
+    // Set to null to disable pruning. Default is 30 days.
+    'admin_prune_days' => env('APP_ADMIN_ACTIVITY_PRUNE_DAYS', 30),
 ];

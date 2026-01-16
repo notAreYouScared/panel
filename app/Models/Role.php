@@ -49,6 +49,9 @@ class Role extends BaseRole
         'activityLog' => [
             'seeIps',
         ],
+        'adminActivityLog' => [
+            'view',
+        ],
         'panelLog' => [
             'view',
         ],
@@ -63,6 +66,7 @@ class Role extends BaseRole
     public const MODEL_ICONS = [
         'health' => 'tabler-heart',
         'activityLog' => 'tabler-stack',
+        'adminActivityLog' => 'tabler-shield-check',
         'panelLog' => 'tabler-file-info',
     ];
 
