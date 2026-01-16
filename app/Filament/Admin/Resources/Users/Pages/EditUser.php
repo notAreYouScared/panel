@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Users\Pages;
 
+use App\Facades\AdminActivity;
 use App\Filament\Admin\Resources\Users\UserResource;
 use App\Models\User;
 use App\Services\Users\UserUpdateService;
@@ -35,6 +36,14 @@ class EditUser extends EditRecord
             DeleteAction::make()
                 ->label(fn (User $user) => user()?->id === $user->id ? trans('admin/user.self_delete') : ($user->servers()->count() > 0 ? trans('admin/user.has_servers') : trans('filament-actions::delete.single.modal.actions.delete.label')))
                 ->disabled(fn (User $user) => user()?->id === $user->id || $user->servers()->count() > 0)
+                ->after(function (User $user) {
+                    AdminActivity::event('user:deleted')
+                        ->property('username', $user->username)
+                        ->property('email', $user->email)
+                        ->property('id', $user->id)
+                        ->withRequestMetadata()
+                        ->log();
+                })
                 ->iconButton()->iconSize(IconSize::ExtraLarge),
             $this->getSaveFormAction()->formId('form')
                 ->iconButton()->iconSize(IconSize::ExtraLarge)
@@ -54,6 +63,54 @@ class EditUser extends EditRecord
         }
         unset($data['roles'], $data['avatar']);
 
-        return $this->service->handle($record, $data);
+        $originalData = [
+            'username' => $record->username,
+            'email' => $record->email,
+        ];
+
+        $user = $this->service->handle($record, $data);
+
+        // Log changes
+        $changes = array_diff_assoc($data, $originalData);
+        if (!empty($changes)) {
+            $logData = [
+                'username' => $user->username,
+            ];
+
+            if (isset($changes['email'])) {
+                $logData['old_email'] = $originalData['email'];
+                $logData['new_email'] = $user->email;
+            }
+
+            if (isset($changes['password'])) {
+                AdminActivity::event('user:password:changed')
+                    ->subject($user)
+                    ->property('username', $user->username)
+                    ->withRequestMetadata()
+                    ->log();
+            }
+
+            if (isset($changes['email'])) {
+                AdminActivity::event('user:email:changed')
+                    ->subject($user)
+                    ->properties([
+                        'username' => $user->username,
+                        'old' => $originalData['email'],
+                        'new' => $user->email,
+                    ])
+                    ->withRequestMetadata()
+                    ->log();
+            } elseif (!isset($changes['password'])) {
+                // Only log general update if not password/email change
+                AdminActivity::event('user:updated')
+                    ->subject($user)
+                    ->property('username', $user->username)
+                    ->properties($changes)
+                    ->withRequestMetadata()
+                    ->log();
+            }
+        }
+
+        return $user;
     }
 }
