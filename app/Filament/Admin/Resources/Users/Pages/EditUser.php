@@ -63,52 +63,38 @@ class EditUser extends EditRecord
         }
         unset($data['roles'], $data['avatar']);
 
-        $originalData = [
-            'username' => $record->username,
-            'email' => $record->email,
-        ];
+        $originalEmail = $record->email;
+        $hasPassword = isset($data['password']);
 
         $user = $this->service->handle($record, $data);
 
         // Log changes
-        $changes = array_diff_assoc($data, $originalData);
-        if (!empty($changes)) {
-            $logData = [
-                'username' => $user->username,
-            ];
+        if ($hasPassword) {
+            AdminActivity::event('user:password:changed')
+                ->subject($user)
+                ->property('username', $user->username)
+                ->withRequestMetadata()
+                ->log();
+        }
 
-            if (isset($changes['email'])) {
-                $logData['old_email'] = $originalData['email'];
-                $logData['new_email'] = $user->email;
-            }
-
-            if (isset($changes['password'])) {
-                AdminActivity::event('user:password:changed')
-                    ->subject($user)
-                    ->property('username', $user->username)
-                    ->withRequestMetadata()
-                    ->log();
-            }
-
-            if (isset($changes['email'])) {
-                AdminActivity::event('user:email:changed')
-                    ->subject($user)
-                    ->properties([
-                        'username' => $user->username,
-                        'old' => $originalData['email'],
-                        'new' => $user->email,
-                    ])
-                    ->withRequestMetadata()
-                    ->log();
-            } elseif (!isset($changes['password'])) {
-                // Only log general update if not password/email change
-                AdminActivity::event('user:updated')
-                    ->subject($user)
-                    ->property('username', $user->username)
-                    ->properties($changes)
-                    ->withRequestMetadata()
-                    ->log();
-            }
+        if ($originalEmail !== $user->email) {
+            AdminActivity::event('user:email:changed')
+                ->subject($user)
+                ->properties([
+                    'username' => $user->username,
+                    'old' => $originalEmail,
+                    'new' => $user->email,
+                ])
+                ->withRequestMetadata()
+                ->log();
+        } elseif (!$hasPassword && !empty($user->getChanges())) {
+            // Only log general update if not password/email change
+            AdminActivity::event('user:updated')
+                ->subject($user)
+                ->property('username', $user->username)
+                ->properties($user->getChanges())
+                ->withRequestMetadata()
+                ->log();
         }
 
         return $user;

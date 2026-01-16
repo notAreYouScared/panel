@@ -35,6 +35,11 @@ class AdminActivityResource extends Resource
 
     protected static bool $isScopedToTenant = false;
 
+    public static function getNavigationGroup(): ?string
+    {
+        return trans('admin/dashboard.advanced');
+    }
+
     /**
      * @throws Exception
      */

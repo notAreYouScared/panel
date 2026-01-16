@@ -7,7 +7,6 @@ use App\Models\User;
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Request;
 use Throwable;
 
