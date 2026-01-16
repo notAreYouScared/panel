@@ -9,14 +9,13 @@ use App\Models\User;
 use App\Traits\Filament\CanCustomizePages;
 use App\Traits\Filament\CanModifyTable;
 use Exception;
-use Filament\Facades\Filament;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
-use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -75,27 +74,6 @@ class AdminActivityLogResource extends Resource
                         });
                     })
                     ->grow(false),
-                TextColumn::make('subject')
-                    ->label(trans('admin/activity.subject'))
-                    ->state(function (AdminActivityLog $activityLog) {
-                        if (!$activityLog->subject) {
-                            return '—';
-                        }
-
-                        $subject = $activityLog->subject;
-                        $type = class_basename($subject);
-
-                        if (method_exists($subject, 'name')) {
-                            return "{$type}: {$subject->name}";
-                        }
-
-                        if (isset($subject->id)) {
-                            return "{$type} #{$subject->id}";
-                        }
-
-                        return $type;
-                    })
-                    ->grow(false),
                 DateTimeColumn::make('timestamp')
                     ->label(trans('admin/activity.timestamp'))
                     ->since()
@@ -117,26 +95,6 @@ class AdminActivityLogResource extends Resource
                                 }
 
                                 return $activityLog->actor->username . ' (' . $activityLog->actor->email . ') - ' . $activityLog->ip;
-                            }),
-                        TextInput::make('subject')
-                            ->label(trans('admin/activity.subject'))
-                            ->formatStateUsing(function (AdminActivityLog $activityLog) {
-                                if (!$activityLog->subject) {
-                                    return '—';
-                                }
-
-                                $subject = $activityLog->subject;
-                                $type = class_basename($subject);
-
-                                if (method_exists($subject, 'name')) {
-                                    return "{$type}: {$subject->name}";
-                                }
-
-                                if (isset($subject->id)) {
-                                    return "{$type} #{$subject->id}";
-                                }
-
-                                return $type;
                             }),
                         DateTimePicker::make('timestamp')
                             ->label(trans('admin/activity.timestamp')),

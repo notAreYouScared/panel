@@ -9,9 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 use LogicException;
 
 /**
@@ -126,15 +124,15 @@ class AdminActivityLog extends Model implements HasIcon, HasLabel
     public function getLabel(): string
     {
         $properties = $this->wrapProperties();
-        
+
         $translationKey = 'admin/activity.'.str($this->event)->replace(':', '.');
         $translated = trans_choice($translationKey, array_key_exists('count', $properties) ? $properties['count'] : 1, $properties);
-        
+
         // If translation is missing, return the event name as fallback
         if ($translated === $translationKey) {
             return str($this->event)->title()->replace(':', ' ')->replace('-', ' ')->toString();
         }
-        
+
         return $translated;
     }
 
