@@ -390,18 +390,24 @@
                 
                 newWindow.document.close();
                 
-                // Send current terminal buffer to new window
-                const buffer = terminal.buffer.active;
-                for (let i = 0; i < buffer.length; i++) {
-                    const line = buffer.getLine(i);
-                    if (line) {
-                        newWindow.writeToTerminal(line.translateToString(true));
-                    }
-                }
+                // Wait for the popup window to load before sending buffer
+                newWindow.addEventListener('load', () => {
+                    // Give scripts time to initialize
+                    setTimeout(() => {
+                        // Send current terminal buffer to new window
+                        const buffer = terminal.buffer.active;
+                        for (let i = 0; i < buffer.length; i++) {
+                            const line = buffer.getLine(i);
+                            if (line && newWindow.writeToTerminal) {
+                                newWindow.writeToTerminal(line.translateToString(true));
+                            }
+                        }
+                    }, 100);
+                });
                 
                 // Create a handler for this window
                 const handler = function(websocketMessageEvent) {
-                    if (newWindow.closed) {
+                    if (newWindow.closed || !newWindow.writeToTerminal) {
                         return;
                     }
                     
