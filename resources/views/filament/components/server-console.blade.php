@@ -222,9 +222,15 @@
         
         // Open console in new window functionality
         document.getElementById('open-console-window').addEventListener('click', function() {
-            const newWindow = window.open('', 'Console_{{ $this->server->name }}', 'width=900,height=600,location=yes,menubar=no,toolbar=no,status=no,resizable=yes');
+            const newWindow = window.open('', 'Console_{{ $this->server->name }}', 'width=900,height=600,location=no,menubar=no,toolbar=no,status=no,resizable=yes');
             
             if (newWindow) {
+                // Prepare theme and options as strings to avoid template parsing issues
+                const themeStr = JSON.stringify(theme);
+                const fontSize = {{ $userFontSize }};
+                const fontFamily = '{{ $userFont }}, monospace';
+                const canSendCommand = {{ $this->canSendCommand() ? 'true' : 'false' }};
+                
                 // Create the HTML structure for the new window
                 newWindow.document.write(`<!DOCTYPE html>
 <html>
@@ -240,27 +246,14 @@
             background: #131a20;
             font-family: monospace;
             overflow: hidden;
-        }
-        #url-bar {
-            background: #1f2937;
-            color: #d1d5db;
-            padding: 8px 12px;
-            border-bottom: 1px solid #374151;
-            font-size: 12px;
-        }
-        #url-bar input {
-            width: 100%;
-            background: #374151;
-            border: 1px solid #4b5563;
-            border-radius: 4px;
-            padding: 4px 8px;
-            color: #d1d5db;
-            font-size: 12px;
-            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
         }
         #terminal-container {
-            height: calc(100vh - 40px);
+            flex: 1;
             background: rgba(19,26,32,0.7);
+            overflow: hidden;
         }
         .xterm {
             padding: 10px;
@@ -268,6 +261,33 @@
         }
         .xterm-viewport {
             overflow-y: auto !important;
+        }
+        #command-input-container {
+            display: flex;
+            align-items: center;
+            background: rgb(17 24 39);
+            border-top: 1px solid rgb(55 65 81);
+            padding: 8px;
+        }
+        #command-input-container svg {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+        #command-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: rgb(209 213 219);
+            font-family: monospace;
+            font-size: 14px;
+            outline: none;
+            padding: 4px;
+        }
+        #command-input:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
         }
         ::-webkit-scrollbar {
             background: none;
@@ -290,18 +310,26 @@
     </style>
 </head>
 <body>
-    <div id="url-bar">
-        <input type="text" readonly value="${window.location.href}" onclick="this.select()">
-    </div>
     <div id="terminal-container"></div>
-    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.11.0/lib/addon-web-links.js"></script>
+    <div id="command-input-container">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: rgb(209 213 219);">
+            <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+        <input 
+            type="text" 
+            id="command-input" 
+            placeholder="${canSendCommand ? 'Enter command...' : 'Command input disabled'}"
+            ${canSendCommand ? '' : 'disabled'}
+        />
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js"><${''}/script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.js"><${''}/script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.11.0/lib/addon-web-links.js"><${''}/script>
     <script>
-        const theme = ${JSON.stringify(theme)};
+        const theme = ${themeStr};
         const termOptions = {
-            fontSize: ${$userFontSize},
-            fontFamily: '{{ $userFont }}, monospace',
+            fontSize: ${fontSize},
+            fontFamily: '${fontFamily}',
             lineHeight: 1.2,
             disableStdin: true,
             cursorStyle: 'underline',
@@ -331,6 +359,22 @@
             return true;
         });
         
+        // Command input handling
+        const commandInput = document.getElementById('command-input');
+        if (commandInput && !commandInput.disabled) {
+            commandInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' && commandInput.value.trim()) {
+                    if (window.opener && !window.opener.closed) {
+                        window.opener.postMessage({ 
+                            type: 'send-command', 
+                            command: commandInput.value.trim() 
+                        }, '*');
+                        commandInput.value = '';
+                    }
+                }
+            });
+        }
+        
         // This will receive messages from the parent window
         window.writeToTerminal = function(data) {
             term.writeln(data);
@@ -340,7 +384,7 @@
         if (window.opener && !window.opener.closed) {
             window.opener.postMessage({ type: 'request-buffer' }, '*');
         }
-    </script>
+    <${''}/script>
 </body>
 </html>`);
                 
@@ -413,6 +457,19 @@
                 window.addEventListener('beforeunload', () => {
                     if (!newWindow.closed) {
                         newWindow.close();
+                    }
+                });
+                
+                // Listen for command messages from popup window
+                window.addEventListener('message', (event) => {
+                    if (event.source === newWindow && event.data.type === 'send-command') {
+                        const command = event.data.command;
+                        if (command && {{ $this->canSendCommand() ? 'true' : 'false' }}) {
+                            socket.send(JSON.stringify({
+                                'event': 'send command',
+                                'args': [command]
+                            }));
+                        }
                     }
                 });
             }
