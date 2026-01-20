@@ -23,15 +23,15 @@ class ImportServerConfigAction extends Action
     {
         parent::setUp();
 
-        $this->label('Import Config');
+        $this->label('Import');
+
+        $this->iconButton();
 
         $this->icon('tabler-file-import');
 
         $this->iconSize(IconSize::ExtraLarge);
 
         $this->tooltip('Import server configuration from YAML file');
-
-        $this->modalWidth(Width::Large);
 
         $this->authorize(fn () => user()?->can('create server'));
 
@@ -65,8 +65,13 @@ class ImportServerConfigAction extends Action
             $nodeId = $data['node_id'] ?? null;
 
             try {
+<<<<<<< Updated upstream
                 $server = $createService->fromFile($file, $nodeId);
                 
+=======
+                $server = $createService->fromFile($file);
+
+>>>>>>> Stashed changes
                 Notification::make()
                     ->title('Server Created')
                     ->body("Server '{$server->name}' has been successfully created from configuration.")

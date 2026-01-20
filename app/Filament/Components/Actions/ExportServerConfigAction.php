@@ -5,7 +5,7 @@ namespace App\Filament\Components\Actions;
 use App\Models\Server;
 use App\Services\Servers\Sharing\ServerConfigExporterService;
 use Filament\Actions\Action;
-use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\Toggle;
 use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\IconSize;
 
@@ -20,9 +20,7 @@ class ExportServerConfigAction extends Action
     {
         parent::setUp();
 
-        $this->label('Export Config');
-
-        $this->icon('tabler-download');
+        $this->label('Export');
 
         $this->iconSize(IconSize::ExtraLarge);
 
@@ -37,15 +35,15 @@ class ExportServerConfigAction extends Action
         $this->modalFooterActionsAlignment(Alignment::Center);
 
         $this->schema([
-            Checkbox::make('include_description')
+            Toggle::make('include_description')
                 ->label('Include Description')
                 ->helperText('Export the server description')
                 ->default(true),
-            Checkbox::make('include_allocations')
+            Toggle::make('include_allocations')
                 ->label('Include Allocations')
                 ->helperText('Export IP addresses and ports assigned to the server')
                 ->default(true),
-            Checkbox::make('include_variable_values')
+            Toggle::make('include_variable_values')
                 ->label('Include Variable Values')
                 ->helperText('Export environment variable values')
                 ->default(true),
@@ -55,7 +53,7 @@ class ExportServerConfigAction extends Action
             function () use ($service, $server, $data) {
                 echo $service->handle($server, $data);
             },
-            'server-config-' . str($server->name)->kebab()->lower()->trim() . '.yaml',
+            'server-' . str($server->name)->kebab()->lower()->trim() . '.yaml',
             [
                 'Content-Type' => 'application/x-yaml',
             ]
