@@ -31,6 +31,14 @@ class ServerConfigCreatorService
         return $this->createServer($parsed, $nodeId);
     }
 
+    /**
+     * Create a server from configuration array.
+     *
+     * @param array<string, mixed> $config
+     * @param int|null $nodeId
+     * @return Server
+     * @throws InvalidFileUploadException
+     */
     protected function createServer(array $config, ?int $nodeId = null): Server
     {
         // Validate egg UUID exists
@@ -131,6 +139,19 @@ class ServerConfigCreatorService
 
         // Create the server
         $serverName = Arr::get($config, 'name', 'Imported Server');
+        
+        // Get startup command from config or egg default
+        $startupCommand = Arr::get($config, 'settings.startup');
+        if ($startupCommand === null && is_array($egg->startup_commands)) {
+            $startupCommand = $egg->startup_commands[0] ?? '';
+        }
+        
+        // Get docker image from config or egg default
+        $dockerImage = Arr::get($config, 'settings.image');
+        if ($dockerImage === null && is_array($egg->docker_images)) {
+            $dockerImagesArray = array_values($egg->docker_images);
+            $dockerImage = $dockerImagesArray[0] ?? '';
+        }
 
         $server = Server::create([
             'uuid' => Str::uuid()->toString(),
@@ -141,8 +162,8 @@ class ServerConfigCreatorService
             'node_id' => $node->id,
             'allocation_id' => $primaryAllocation?->id, // Can be null if no allocations
             'egg_id' => $egg->id,
-            'startup' => Arr::get($config, 'settings.startup', is_array($egg->startup_commands ?? null) ? ($egg->startup_commands[0] ?? '') : ''),
-            'image' => Arr::get($config, 'settings.image', is_array($egg->docker_images ?? null) ? (array_values($egg->docker_images)[0] ?? '') : ''),
+            'startup' => $startupCommand ?? '',
+            'image' => $dockerImage ?? '',
             'skip_scripts' => Arr::get($config, 'settings.skip_scripts', false),
             'memory' => Arr::get($config, 'limits.memory', 512),
             'swap' => Arr::get($config, 'limits.swap', 0),
