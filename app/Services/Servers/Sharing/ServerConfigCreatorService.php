@@ -8,7 +8,6 @@ use App\Models\Egg;
 use App\Models\Node;
 use App\Models\Server;
 use App\Models\ServerVariable;
-use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -16,6 +15,9 @@ use Symfony\Component\Yaml\Yaml;
 
 class ServerConfigCreatorService
 {
+    /**
+     * @throws InvalidFileUploadException
+     */
     public function fromFile(UploadedFile $file, ?int $nodeId = null): Server
     {
         if ($file->getError() !== UPLOAD_ERR_OK) {
@@ -34,9 +36,8 @@ class ServerConfigCreatorService
     /**
      * Create a server from configuration array.
      *
-     * @param array<string, mixed> $config
-     * @param int|null $nodeId
-     * @return Server
+     * @param  array<string, mixed>  $config
+     *
      * @throws InvalidFileUploadException
      */
     protected function createServer(array $config, ?int $nodeId = null): Server
@@ -59,7 +60,6 @@ class ServerConfigCreatorService
             );
         }
 
-        // Get the specified node or the first accessible node
         if ($nodeId) {
             $node = Node::whereIn('id', user()?->accessibleNodes()->pluck('id'))
                 ->where('id', $nodeId)
@@ -76,35 +76,29 @@ class ServerConfigCreatorService
             }
         }
 
-        // Get or create allocations
         $allocations = Arr::get($config, 'allocations', []);
         $primaryAllocation = null;
         $createdAllocations = [];
 
-        // Only process allocations if they exist in the config
         if (!empty($allocations)) {
             foreach ($allocations as $allocationData) {
                 $ip = Arr::get($allocationData, 'ip');
                 $port = Arr::get($allocationData, 'port');
                 $isPrimary = Arr::get($allocationData, 'is_primary', false);
 
-                // Check if allocation exists and is available
                 $allocation = Allocation::where('node_id', $node->id)
                     ->where('ip', $ip)
                     ->where('port', $port)
                     ->whereNull('server_id')
                     ->first();
 
-                // If allocation doesn't exist or is in use, create a new one
                 if (!$allocation) {
-                    // Check if port is in use
                     $existingAllocation = Allocation::where('node_id', $node->id)
                         ->where('ip', $ip)
                         ->where('port', $port)
                         ->first();
 
                     if ($existingAllocation) {
-                        // Find next available port
                         $port = $this->findNextAvailablePort($node->id, $ip, $port);
                     }
 
@@ -117,38 +111,31 @@ class ServerConfigCreatorService
 
                 $createdAllocations[] = $allocation;
 
-                // Set as primary allocation if specified
                 if ($isPrimary && !$primaryAllocation) {
                     $primaryAllocation = $allocation;
                 }
             }
 
-            // If allocations exist but no primary specified, use the first one
             if (!$primaryAllocation && !empty($createdAllocations)) {
                 $primaryAllocation = $createdAllocations[0];
             }
         }
-        // If no allocations in config, primaryAllocation stays null (server without allocation)
 
-        // Use the current authenticated user as the owner
         $owner = user();
 
         if (!$owner) {
             throw new InvalidFileUploadException('No authenticated user found');
         }
 
-        // Create the server
         $serverName = Arr::get($config, 'name', 'Imported Server');
-        
-        // Get startup command from config or egg default
+
         $startupCommand = Arr::get($config, 'settings.startup');
-        if ($startupCommand === null && is_array($egg->startup_commands)) {
-            $startupCommand = $egg->startup_commands[0] ?? '';
+        if ($startupCommand === null) {
+            $startupCommand = $egg->startup_commands[0];
         }
-        
-        // Get docker image from config or egg default
+
         $dockerImage = Arr::get($config, 'settings.image');
-        if ($dockerImage === null && is_array($egg->docker_images)) {
+        if ($dockerImage === null) {
             $dockerImagesArray = array_values($egg->docker_images);
             $dockerImage = $dockerImagesArray[0] ?? '';
         }
@@ -160,10 +147,10 @@ class ServerConfigCreatorService
             'description' => Arr::get($config, 'description', ''),
             'owner_id' => $owner->id,
             'node_id' => $node->id,
-            'allocation_id' => $primaryAllocation?->id, // Can be null if no allocations
+            'allocation_id' => $primaryAllocation?->id,
             'egg_id' => $egg->id,
-            'startup' => $startupCommand ?? '',
-            'image' => $dockerImage ?? '',
+            'startup' => $startupCommand,
+            'image' => $dockerImage,
             'skip_scripts' => Arr::get($config, 'settings.skip_scripts', false),
             'memory' => Arr::get($config, 'limits.memory', 512),
             'swap' => Arr::get($config, 'limits.swap', 0),
@@ -177,19 +164,16 @@ class ServerConfigCreatorService
             'backup_limit' => Arr::get($config, 'feature_limits.backups', 0),
         ]);
 
-        // Assign allocations to the server (if any exist)
         if ($primaryAllocation) {
             $primaryAllocation->update(['server_id' => $server->id]);
         }
 
-        // Assign all other allocations to the server
         foreach ($createdAllocations as $allocation) {
             if ($allocation->id !== $primaryAllocation?->id) {
                 $allocation->update(['server_id' => $server->id]);
             }
         }
 
-        // Import variables
         if (isset($config['variables'])) {
             $this->importVariables($server, $config['variables']);
         }
@@ -197,17 +181,18 @@ class ServerConfigCreatorService
         return $server;
     }
 
+    /**
+     * @param  array<int, array{env_variable: string, value: string|null}>  $variables
+     */
     protected function importVariables(Server $server, array $variables): void
     {
         foreach ($variables as $variable) {
             $envVariable = Arr::get($variable, 'env_variable');
             $value = Arr::get($variable, 'value');
 
-            // Find the egg variable
             $eggVariable = $server->egg->variables()->where('env_variable', $envVariable)->first();
 
             if ($eggVariable) {
-                // Create the server variable
                 ServerVariable::create([
                     'server_id' => $server->id,
                     'variable_id' => $eggVariable->id,
@@ -217,6 +202,9 @@ class ServerConfigCreatorService
         }
     }
 
+    /**
+     * @throws InvalidFileUploadException
+     */
     protected function findNextAvailablePort(int $nodeId, string $ip, int $startPort): int
     {
         $port = $startPort + 1;

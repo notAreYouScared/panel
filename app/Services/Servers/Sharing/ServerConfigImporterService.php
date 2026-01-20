@@ -14,6 +14,9 @@ use Symfony\Component\Yaml\Yaml;
 
 class ServerConfigImporterService
 {
+    /**
+     * @throws InvalidFileUploadException
+     */
     public function fromFile(UploadedFile $file, Server $server): void
     {
         if ($file->getError() !== UPLOAD_ERR_OK) {
@@ -29,11 +32,42 @@ class ServerConfigImporterService
         $this->applyConfiguration($server, $parsed);
     }
 
+    /**
+     * @param array{
+     *     egg: array{
+     *         uuid: string,
+     *         name?: string
+     *     },
+     *     settings?: array{
+     *         startup?: string,
+     *         image?: string,
+     *         skip_scripts?: bool
+     *     },
+     *     limits?: array{
+     *         memory?: int,
+     *         swap?: int,
+     *         disk?: int,
+     *         io?: int,
+     *         cpu?: int,
+     *         threads?: string,
+     *         oom_killer?: bool
+     *     },
+     *     feature_limits?: array{
+     *         databases?: int,
+     *         allocations?: int,
+     *         backups?: int
+     *     },
+     *     description?: string,
+     *     variables?: array<int, array{env_variable: string, value: string|null}>,
+     *     allocations?: array<int, array{ip: string, port: int, is_primary?: bool}>
+     * } $config
+     *
+     * @throws InvalidFileUploadException
+     */
     public function applyConfiguration(Server $server, array $config): void
     {
-        // Validate egg UUID exists
         $eggUuid = Arr::get($config, 'egg.uuid');
-        $eggName = Arr::get($config, 'egg.name'); // NEW REQUIREMENT: Also get egg name
+        $eggName = Arr::get($config, 'egg.name');
 
         if (!$eggUuid) {
             throw new InvalidFileUploadException('Egg UUID is required in the configuration file');
@@ -49,7 +83,6 @@ class ServerConfigImporterService
             );
         }
 
-        // Update server configuration
         $server->update([
             'egg_id' => $egg->id,
             'startup' => Arr::get($config, 'settings.startup', $server->startup),
@@ -67,35 +100,33 @@ class ServerConfigImporterService
             'backup_limit' => Arr::get($config, 'feature_limits.backups', $server->backup_limit),
         ]);
 
-        // Optional: Update description
         if (isset($config['description'])) {
             $server->update(['description' => $config['description']]);
         }
 
-        // Optional: Import variables
         if (isset($config['variables'])) {
             $this->importVariables($server, $config['variables']);
         }
 
-        // Optional: Import allocations
         if (isset($config['allocations'])) {
             $this->importAllocations($server, $config['allocations']);
         }
     }
 
+    /**
+     * @param  array<int, array{env_variable: string, value: string|null}>  $variables
+     */
     protected function importVariables(Server $server, array $variables): void
     {
         foreach ($variables as $variable) {
             $envVariable = Arr::get($variable, 'env_variable');
             $value = Arr::get($variable, 'value');
 
-            // Find the egg variable
             $eggVariable = EggVariable::where('egg_id', $server->egg_id)
                 ->where('env_variable', $envVariable)
                 ->first();
 
             if ($eggVariable) {
-                // Update or create the server variable
                 ServerVariable::updateOrCreate(
                     [
                         'server_id' => $server->id,
@@ -109,6 +140,15 @@ class ServerConfigImporterService
         }
     }
 
+    /**
+     * @param array<int, array{
+     *     ip: string,
+     *     port: int,
+     *     is_primary?: bool
+     * }> $allocations
+     *
+     * @throws InvalidFileUploadException
+     */
     protected function importAllocations(Server $server, array $allocations): void
     {
         $nodeId = $server->node_id;
@@ -119,13 +159,11 @@ class ServerConfigImporterService
             $port = Arr::get($allocationData, 'port');
             $isPrimary = Arr::get($allocationData, 'is_primary', false);
 
-            // Check if allocation exists and is available
             $allocation = Allocation::where('node_id', $nodeId)
                 ->where('ip', $ip)
                 ->where('port', $port)
                 ->first();
 
-            // If allocation doesn't exist, create it
             if (!$allocation) {
                 $allocation = Allocation::create([
                     'node_id' => $nodeId,
@@ -133,9 +171,7 @@ class ServerConfigImporterService
                     'port' => $port,
                     'server_id' => $server->id,
                 ]);
-            }
-            // If allocation exists but is in use by another server, find next available port
-            elseif ($allocation->server_id && $allocation->server_id !== $server->id) {
+            } elseif ($allocation->server_id && $allocation->server_id !== $server->id) {
                 $newPort = $this->findNextAvailablePort($nodeId, $ip, $port);
 
                 $allocation = Allocation::create([
@@ -144,13 +180,10 @@ class ServerConfigImporterService
                     'port' => $newPort,
                     'server_id' => $server->id,
                 ]);
-            }
-            // If allocation exists and is available, assign it to the server
-            elseif (!$allocation->server_id) {
+            } elseif (!$allocation->server_id) {
                 $allocation->update(['server_id' => $server->id]);
             }
 
-            // Set as primary allocation if specified and not already set
             if ($isPrimary && !$primaryAllocationSet) {
                 $server->update(['allocation_id' => $allocation->id]);
                 $primaryAllocationSet = true;
@@ -158,6 +191,9 @@ class ServerConfigImporterService
         }
     }
 
+    /**
+     * @throws InvalidFileUploadException
+     */
     protected function findNextAvailablePort(int $nodeId, string $ip, int $startPort): int
     {
         $port = $startPort + 1;

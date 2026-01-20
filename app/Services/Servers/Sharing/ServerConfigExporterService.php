@@ -7,24 +7,25 @@ use Symfony\Component\Yaml\Yaml;
 
 class ServerConfigExporterService
 {
+    /**
+     * @param  array<string, bool>  $options
+     */
     public function handle(Server|int $server, array $options = []): string
     {
         if (!$server instanceof Server) {
             $server = Server::with(['egg', 'allocations', 'serverVariables.variable'])->findOrFail($server);
         }
 
-        // Default options
         $includeDescription = $options['include_description'] ?? true;
         $includeAllocations = $options['include_allocations'] ?? true;
         $includeVariableValues = $options['include_variable_values'] ?? true;
 
-        // Base configuration
         $data = [
             'version' => '1.0',
             'name' => $server->name,
             'egg' => [
                 'uuid' => $server->egg->uuid,
-                'name' => $server->egg->name, // NEW REQUIREMENT: Include egg name
+                'name' => $server->egg->name,
             ],
             'settings' => [
                 'startup' => $server->startup,
@@ -47,12 +48,10 @@ class ServerConfigExporterService
             ],
         ];
 
-        // Optional: Description
         if ($includeDescription && !empty($server->description)) {
             $data['description'] = $server->description;
         }
 
-        // Optional: Allocations
         if ($includeAllocations && $server->allocations->isNotEmpty()) {
             $data['allocations'] = $server->allocations->map(function ($allocation) use ($server) {
                 return [
@@ -63,7 +62,6 @@ class ServerConfigExporterService
             })->values()->all();
         }
 
-        // Optional: Variable Values
         if ($includeVariableValues && $server->serverVariables->isNotEmpty()) {
             $data['variables'] = $server->serverVariables->map(function ($serverVar) {
                 return [
