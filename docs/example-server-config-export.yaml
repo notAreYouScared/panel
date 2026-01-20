@@ -1,0 +1,49 @@
+# Sample Server Configuration Export
+# This file was exported from the panel and can be imported to another panel
+# to replicate the server configuration
+
+version: 1.0
+name: "My Minecraft Server"
+description: "Production Minecraft server with custom mods"
+
+egg:
+  uuid: "915c2456-7c3e-4b86-a7e9-1e0b9c8d4a5b"
+  name: "Minecraft Java Edition"
+
+settings:
+  startup: "java -Xms128M -Xmx{{SERVER_MEMORY}}M -jar {{SERVER_JARFILE}}"
+  image: "ghcr.io/pterodactyl/yolks:java_17"
+  skip_scripts: false
+
+limits:
+  memory: 2048
+  swap: 0
+  disk: 10240
+  io: 500
+  cpu: 200
+  threads: null
+  oom_killer: false
+
+feature_limits:
+  databases: 2
+  allocations: 3
+  backups: 5
+
+allocations:
+  - ip: "192.168.1.100"
+    port: 25565
+    is_primary: true
+  - ip: "192.168.1.100"
+    port: 25566
+    is_primary: false
+  - ip: "192.168.1.100"
+    port: 25567
+    is_primary: false
+
+variables:
+  - env_variable: "SERVER_JARFILE"
+    value: "server.jar"
+  - env_variable: "MINECRAFT_VERSION"
+    value: "1.20.1"
+  - env_variable: "BUILD_NUMBER"
+    value: "latest"
