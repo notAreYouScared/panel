@@ -52,10 +52,10 @@ class ImportServerConfigAction extends Action
             Select::make('node_id')
                 ->label('Node')
                 ->hint('Select the node where the server will be created')
-                ->options(fn () => user()?->accessibleNodes()->pluck('name', 'id'))
+                ->options(fn () => user()?->accessibleNodes()->pluck('name', 'id') ?? [])
                 ->searchable()
                 ->required()
-                ->visible(fn () => user()?->accessibleNodes()->count() > 1)
+                ->visible(fn () => (user()?->accessibleNodes()->count() ?? 0) > 1)
                 ->default(fn () => user()?->accessibleNodes()->first()?->id),
         ]);
 
@@ -65,13 +65,8 @@ class ImportServerConfigAction extends Action
             $nodeId = $data['node_id'] ?? null;
 
             try {
-<<<<<<< Updated upstream
                 $server = $createService->fromFile($file, $nodeId);
                 
-=======
-                $server = $createService->fromFile($file);
-
->>>>>>> Stashed changes
                 Notification::make()
                     ->title('Server Created')
                     ->body("Server '{$server->name}' has been successfully created from configuration.")

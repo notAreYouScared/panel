@@ -141,8 +141,8 @@ class ServerConfigCreatorService
             'node_id' => $node->id,
             'allocation_id' => $primaryAllocation?->id, // Can be null if no allocations
             'egg_id' => $egg->id,
-            'startup' => Arr::get($config, 'settings.startup', $egg->startup_commands[0] ?? ''),
-            'image' => Arr::get($config, 'settings.image', array_values($egg->docker_images)[0] ?? ''),
+            'startup' => Arr::get($config, 'settings.startup', is_array($egg->startup_commands ?? null) ? ($egg->startup_commands[0] ?? '') : ''),
+            'image' => Arr::get($config, 'settings.image', is_array($egg->docker_images ?? null) ? (array_values($egg->docker_images)[0] ?? '') : ''),
             'skip_scripts' => Arr::get($config, 'settings.skip_scripts', false),
             'memory' => Arr::get($config, 'limits.memory', 512),
             'swap' => Arr::get($config, 'limits.swap', 0),

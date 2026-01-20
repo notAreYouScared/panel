@@ -64,7 +64,7 @@ class ServerConfigExporterService
         }
 
         // Optional: Variable Values
-        if ($includeVariableValues) {
+        if ($includeVariableValues && $server->serverVariables->isNotEmpty()) {
             $data['variables'] = $server->serverVariables->map(function ($serverVar) {
                 return [
                     'env_variable' => $serverVar->variable->env_variable,
