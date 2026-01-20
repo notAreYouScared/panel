@@ -63,6 +63,7 @@ class ServerConfigCreatorService
         $primaryAllocation = null;
         $createdAllocations = [];
         
+        // Only process allocations if they exist in the config
         if (!empty($allocations)) {
             foreach ($allocations as $allocationData) {
                 $ip = Arr::get($allocationData, 'ip');
@@ -103,39 +104,13 @@ class ServerConfigCreatorService
                     $primaryAllocation = $allocation;
                 }
             }
-        }
 
-        // If no primary allocation specified, use the first created allocation or get/create one
-        if (!$primaryAllocation) {
-            if (!empty($createdAllocations)) {
+            // If allocations exist but no primary specified, use the first one
+            if (!$primaryAllocation && !empty($createdAllocations)) {
                 $primaryAllocation = $createdAllocations[0];
-            } else {
-                // No allocations in config, try to get an available one
-                $primaryAllocation = Allocation::where('node_id', $node->id)
-                    ->whereNull('server_id')
-                    ->first();
-                
-                // If no available allocation exists, create one
-                if (!$primaryAllocation) {
-                    // Get any IP from the node or use a default
-                    $existingAllocation = Allocation::where('node_id', $node->id)->first();
-                    if ($existingAllocation) {
-                        $ip = $existingAllocation->ip;
-                        $port = $this->findNextAvailablePort($node->id, $ip, 25565);
-                    } else {
-                        throw new InvalidFileUploadException('No allocations found on node and cannot determine IP address');
-                    }
-                    
-                    $primaryAllocation = Allocation::create([
-                        'node_id' => $node->id,
-                        'ip' => $ip,
-                        'port' => $port,
-                    ]);
-                }
-                
-                $createdAllocations[] = $primaryAllocation;
             }
         }
+        // If no allocations in config, primaryAllocation stays null (server without allocation)
 
         // Use the current authenticated user as the owner
         $owner = user();
@@ -154,7 +129,7 @@ class ServerConfigCreatorService
             'description' => Arr::get($config, 'description', ''),
             'owner_id' => $owner->id,
             'node_id' => $node->id,
-            'allocation_id' => $primaryAllocation->id,
+            'allocation_id' => $primaryAllocation?->id, // Can be null if no allocations
             'egg_id' => $egg->id,
             'startup' => Arr::get($config, 'settings.startup', $egg->startup_commands[0] ?? ''),
             'image' => Arr::get($config, 'settings.image', array_values($egg->docker_images)[0] ?? ''),
@@ -171,12 +146,14 @@ class ServerConfigCreatorService
             'backup_limit' => Arr::get($config, 'feature_limits.backups', 0),
         ]);
 
-        // Assign the primary allocation to the server
-        $primaryAllocation->update(['server_id' => $server->id]);
+        // Assign allocations to the server (if any exist)
+        if ($primaryAllocation) {
+            $primaryAllocation->update(['server_id' => $server->id]);
+        }
 
         // Assign all other allocations to the server
         foreach ($createdAllocations as $allocation) {
-            if ($allocation->id !== $primaryAllocation->id) {
+            if ($allocation->id !== $primaryAllocation?->id) {
                 $allocation->update(['server_id' => $server->id]);
             }
         }

@@ -53,7 +53,7 @@ class ServerConfigExporterService
         }
 
         // Optional: Allocations
-        if ($includeAllocations) {
+        if ($includeAllocations && $server->allocations->isNotEmpty()) {
             $data['allocations'] = $server->allocations->map(function ($allocation) use ($server) {
                 return [
                     'ip' => $allocation->ip,
