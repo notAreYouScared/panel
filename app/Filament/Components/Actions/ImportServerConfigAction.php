@@ -51,10 +51,10 @@ class ImportServerConfigAction extends Action
             Select::make('node_id')
                 ->label('Node')
                 ->hint('Select the node where the server will be created')
-                ->options(fn () => user()?->accessibleNodes()->pluck('name', 'id'))
+                ->options(fn () => user()?->accessibleNodes()->pluck('name', 'id') ?? [])
                 ->searchable()
                 ->required()
-                ->visible(fn () => user()?->accessibleNodes()->count() > 1)
+                ->visible(fn () => (user()?->accessibleNodes()->count() ?? 0) > 1)
                 ->default(fn () => user()?->accessibleNodes()->first()?->id),
         ]);
 
