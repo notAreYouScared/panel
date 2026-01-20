@@ -34,32 +34,13 @@ class ServerConfigImporterService
 
     /**
      * @param array{
-     *     egg: array{
-     *         uuid: string,
-     *         name?: string
-     *     },
-     *     settings?: array{
-     *         startup?: string,
-     *         image?: string,
-     *         skip_scripts?: bool
-     *     },
-     *     limits?: array{
-     *         memory?: int,
-     *         swap?: int,
-     *         disk?: int,
-     *         io?: int,
-     *         cpu?: int,
-     *         threads?: string,
-     *         oom_killer?: bool
-     *     },
-     *     feature_limits?: array{
-     *         databases?: int,
-     *         allocations?: int,
-     *         backups?: int
-     *     },
-     *     description?: string,
-     *     variables?: array<int, array{env_variable: string, value: string|null}>,
-     *     allocations?: array<int, array{ip: string, port: int, is_primary?: bool}>
+     *      egg: array{uuid: string, name?: string},
+     *      settings?: array<string, mixed>,
+     *      limits?: array<string, mixed>,
+     *      feature_limits?: array<string, mixed>,
+     *      description?: string,
+     *      variables?: array<int, array<string, mixed>>,
+     *      allocations?: array<int, array<string, mixed>>
      * } $config
      *
      * @throws InvalidFileUploadException
@@ -114,7 +95,7 @@ class ServerConfigImporterService
     }
 
     /**
-     * @param  array<int, array{env_variable: string, value: string|null}>  $variables
+     * @param  array[]  $variables
      */
     protected function importVariables(Server $server, array $variables): void
     {
@@ -141,12 +122,7 @@ class ServerConfigImporterService
     }
 
     /**
-     * @param array<int, array{
-     *     ip: string,
-     *     port: int,
-     *     is_primary?: bool
-     * }> $allocations
-     *
+     * @param array<int, array<string, mixed>> $allocations
      * @throws InvalidFileUploadException
      */
     protected function importAllocations(Server $server, array $allocations): void
