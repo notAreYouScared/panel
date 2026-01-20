@@ -1,0 +1,78 @@
+<?php
+
+namespace App\Services\Servers\Sharing;
+
+use App\Models\Server;
+use Symfony\Component\Yaml\Yaml;
+
+class ServerConfigExporterService
+{
+    public function handle(Server|int $server, array $options = []): string
+    {
+        if (!$server instanceof Server) {
+            $server = Server::with(['egg', 'allocations', 'serverVariables.variable'])->findOrFail($server);
+        }
+
+        // Default options
+        $includeDescription = $options['include_description'] ?? true;
+        $includeAllocations = $options['include_allocations'] ?? true;
+        $includeVariableValues = $options['include_variable_values'] ?? true;
+
+        // Base configuration
+        $data = [
+            'version' => '1.0',
+            'name' => $server->name,
+            'egg' => [
+                'uuid' => $server->egg->uuid,
+                'name' => $server->egg->name, // NEW REQUIREMENT: Include egg name
+            ],
+            'settings' => [
+                'startup' => $server->startup,
+                'image' => $server->image,
+                'skip_scripts' => $server->skip_scripts,
+            ],
+            'limits' => [
+                'memory' => $server->memory,
+                'swap' => $server->swap,
+                'disk' => $server->disk,
+                'io' => $server->io,
+                'cpu' => $server->cpu,
+                'threads' => $server->threads,
+                'oom_killer' => $server->oom_killer,
+            ],
+            'feature_limits' => [
+                'databases' => $server->database_limit,
+                'allocations' => $server->allocation_limit,
+                'backups' => $server->backup_limit,
+            ],
+        ];
+
+        // Optional: Description
+        if ($includeDescription && !empty($server->description)) {
+            $data['description'] = $server->description;
+        }
+
+        // Optional: Allocations
+        if ($includeAllocations) {
+            $data['allocations'] = $server->allocations->map(function ($allocation) use ($server) {
+                return [
+                    'ip' => $allocation->ip,
+                    'port' => $allocation->port,
+                    'is_primary' => $allocation->id === $server->allocation_id,
+                ];
+            })->values()->all();
+        }
+
+        // Optional: Variable Values
+        if ($includeVariableValues) {
+            $data['variables'] = $server->serverVariables->map(function ($serverVar) {
+                return [
+                    'env_variable' => $serverVar->variable->env_variable,
+                    'value' => $serverVar->variable_value,
+                ];
+            })->values()->all();
+        }
+
+        return Yaml::dump($data, 4, 2);
+    }
+}

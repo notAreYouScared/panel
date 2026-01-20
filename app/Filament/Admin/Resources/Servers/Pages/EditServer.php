@@ -5,6 +5,8 @@ namespace App\Filament\Admin\Resources\Servers\Pages;
 use App\Enums\SuspendAction;
 use App\Filament\Admin\Resources\Servers\ServerResource;
 use App\Filament\Components\Actions\DeleteServerIcon;
+use App\Filament\Components\Actions\ExportServerConfigAction;
+use App\Filament\Components\Actions\ImportServerConfigAction;
 use App\Filament\Components\Actions\PreviewStartupAction;
 use App\Filament\Components\Forms\Fields\MonacoEditor;
 use App\Filament\Components\Forms\Fields\StartupVariable;
@@ -1002,6 +1004,26 @@ class EditServer extends EditRecord
                                     ToggleButtons::make('server_transfer')
                                         ->hiddenLabel()
                                         ->hint(new HtmlString(trans('admin/server.transfer_help'))),
+                                ]),
+                            Grid::make()
+                                ->columnSpan(3)
+                                ->schema([
+                                    Actions::make([
+                                        ExportServerConfigAction::make(),
+                                    ])->fullWidth(),
+                                    ToggleButtons::make('export_help')
+                                        ->hiddenLabel()
+                                        ->hint('Export server configuration to a YAML file that can be imported on another panel'),
+                                ]),
+                            Grid::make()
+                                ->columnSpan(3)
+                                ->schema([
+                                    Actions::make([
+                                        ImportServerConfigAction::make(),
+                                    ])->fullWidth(),
+                                    ToggleButtons::make('import_help')
+                                        ->hiddenLabel()
+                                        ->hint('Import server configuration from a YAML file exported from another panel'),
                                 ]),
                             Grid::make()
                                 ->columnSpan(3)
