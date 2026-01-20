@@ -21,7 +21,6 @@ class ServerConfigExporterService
         $includeVariableValues = $options['include_variable_values'] ?? true;
 
         $data = [
-            'version' => '1.0',
             'name' => $server->name,
             'egg' => [
                 'uuid' => $server->egg->uuid,

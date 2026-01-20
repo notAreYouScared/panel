@@ -57,7 +57,6 @@ class ServerConfigImportExportTest extends IntegrationTestCase
         ]);
 
         $this->assertNotEmpty($yaml);
-        $this->assertStringContainsString('version: 1.0', $yaml);
         $this->assertStringContainsString('name: "Test Server"', $yaml);
         $this->assertStringContainsString('description: "Test Description"', $yaml);
         $this->assertStringContainsString('uuid: ' . $this->egg->uuid, $yaml);
@@ -79,7 +78,6 @@ class ServerConfigImportExportTest extends IntegrationTestCase
         ]);
 
         $this->assertNotEmpty($yaml);
-        $this->assertStringContainsString('version: 1.0', $yaml);
         $this->assertStringNotContainsString('description:', $yaml);
         $this->assertStringNotContainsString('allocations:', $yaml);
         $this->assertStringNotContainsString('variables:', $yaml);
@@ -126,7 +124,6 @@ class ServerConfigImportExportTest extends IntegrationTestCase
         $this->expectExceptionMessage('does not exist in the system');
 
         $yaml = <<<'YAML'
-version: 1.0
 name: Test
 egg:
   uuid: 00000000-0000-0000-0000-000000000000
