@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Storage;
 class ServerConfigImportExportTest extends IntegrationTestCase
 {
     protected Server $server;
+
     protected Egg $egg;
 
     protected function setUp(): void
@@ -26,7 +27,7 @@ class ServerConfigImportExportTest extends IntegrationTestCase
         $user = User::factory()->create();
         $node = Node::factory()->create();
         $this->egg = Egg::factory()->create();
-        
+
         $allocation = Allocation::factory()->create([
             'node_id' => $node->id,
         ]);
@@ -48,7 +49,7 @@ class ServerConfigImportExportTest extends IntegrationTestCase
     public function test_server_config_can_be_exported(): void
     {
         $service = $this->app->make(ServerConfigExporterService::class);
-        
+
         $yaml = $service->handle($this->server, [
             'include_description' => true,
             'include_allocations' => true,
@@ -70,7 +71,7 @@ class ServerConfigImportExportTest extends IntegrationTestCase
     public function test_server_config_export_without_optional_fields(): void
     {
         $service = $this->app->make(ServerConfigExporterService::class);
-        
+
         $yaml = $service->handle($this->server, [
             'include_description' => false,
             'include_allocations' => false,
@@ -124,7 +125,7 @@ class ServerConfigImportExportTest extends IntegrationTestCase
         $this->expectException(\App\Exceptions\Service\InvalidFileUploadException::class);
         $this->expectExceptionMessage('does not exist in the system');
 
-        $yaml = <<<YAML
+        $yaml = <<<'YAML'
 version: 1.0
 name: Test
 egg:
@@ -149,7 +150,7 @@ feature_limits:
 YAML;
 
         $file = UploadedFile::fake()->createWithContent('config.yaml', $yaml);
-        
+
         $importService = $this->app->make(ServerConfigImporterService::class);
         $importService->fromFile($file, $this->server);
     }

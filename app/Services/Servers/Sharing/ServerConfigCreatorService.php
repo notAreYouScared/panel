@@ -36,18 +36,18 @@ class ServerConfigCreatorService
         // Validate egg UUID exists
         $eggUuid = Arr::get($config, 'egg.uuid');
         $eggName = Arr::get($config, 'egg.name');
-        
+
         if (!$eggUuid) {
             throw new InvalidFileUploadException('Egg UUID is required in the configuration file');
         }
 
         $egg = Egg::where('uuid', $eggUuid)->first();
-        
+
         if (!$egg) {
             throw new InvalidFileUploadException(
-                "Egg with UUID '{$eggUuid}'" . 
-                ($eggName ? " (name: {$eggName})" : "") . 
-                " does not exist in the system"
+                "Egg with UUID '{$eggUuid}'" .
+                ($eggName ? " (name: {$eggName})" : '') .
+                ' does not exist in the system'
             );
         }
 
@@ -56,13 +56,13 @@ class ServerConfigCreatorService
             $node = Node::whereIn('id', user()?->accessibleNodes()->pluck('id'))
                 ->where('id', $nodeId)
                 ->first();
-            
+
             if (!$node) {
                 throw new InvalidFileUploadException('Selected node is not accessible or does not exist');
             }
         } else {
             $node = Node::whereIn('id', user()?->accessibleNodes()->pluck('id'))->first();
-            
+
             if (!$node) {
                 throw new InvalidFileUploadException('No accessible nodes found');
             }
@@ -72,7 +72,7 @@ class ServerConfigCreatorService
         $allocations = Arr::get($config, 'allocations', []);
         $primaryAllocation = null;
         $createdAllocations = [];
-        
+
         // Only process allocations if they exist in the config
         if (!empty($allocations)) {
             foreach ($allocations as $allocationData) {
@@ -124,14 +124,14 @@ class ServerConfigCreatorService
 
         // Use the current authenticated user as the owner
         $owner = user();
-        
+
         if (!$owner) {
             throw new InvalidFileUploadException('No authenticated user found');
         }
 
         // Create the server
         $serverName = Arr::get($config, 'name', 'Imported Server');
-        
+
         $server = Server::create([
             'uuid' => Str::uuid()->toString(),
             'uuid_short' => Str::uuid()->toString(),

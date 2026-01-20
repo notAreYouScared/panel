@@ -34,18 +34,18 @@ class ServerConfigImporterService
         // Validate egg UUID exists
         $eggUuid = Arr::get($config, 'egg.uuid');
         $eggName = Arr::get($config, 'egg.name'); // NEW REQUIREMENT: Also get egg name
-        
+
         if (!$eggUuid) {
             throw new InvalidFileUploadException('Egg UUID is required in the configuration file');
         }
 
         $egg = Egg::where('uuid', $eggUuid)->first();
-        
+
         if (!$egg) {
             throw new InvalidFileUploadException(
-                "Egg with UUID '{$eggUuid}'" . 
-                ($eggName ? " (name: {$eggName})" : "") . 
-                " does not exist in the system"
+                "Egg with UUID '{$eggUuid}'" .
+                ($eggName ? " (name: {$eggName})" : '') .
+                ' does not exist in the system'
             );
         }
 
@@ -137,7 +137,7 @@ class ServerConfigImporterService
             // If allocation exists but is in use by another server, find next available port
             elseif ($allocation->server_id && $allocation->server_id !== $server->id) {
                 $newPort = $this->findNextAvailablePort($nodeId, $ip, $port);
-                
+
                 $allocation = Allocation::create([
                     'node_id' => $nodeId,
                     'ip' => $ip,

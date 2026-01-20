@@ -9,7 +9,6 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Support\Enums\IconSize;
-use Filament\Support\Enums\Width;
 use Illuminate\Http\UploadedFile;
 
 class ImportServerConfigAction extends Action
@@ -65,13 +64,8 @@ class ImportServerConfigAction extends Action
             $nodeId = $data['node_id'] ?? null;
 
             try {
-<<<<<<< Updated upstream
                 $server = $createService->fromFile($file, $nodeId);
-                
-=======
-                $server = $createService->fromFile($file);
 
->>>>>>> Stashed changes
                 Notification::make()
                     ->title('Server Created')
                     ->body("Server '{$server->name}' has been successfully created from configuration.")
