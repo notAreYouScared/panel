@@ -5,12 +5,14 @@ namespace App\Filament\Components\Actions;
 use App\Exceptions\Service\InvalidFileUploadException;
 use App\Models\Server;
 use App\Services\Servers\Sharing\ServerConfigImporterService;
+use App\Services\Servers\Sharing\ServerConfigCreatorService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Support\Enums\IconSize;
 use Filament\Support\Enums\Width;
-use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Illuminate\Http\UploadedFile;
 
 class ImportServerConfigAction extends Action
 {
@@ -33,11 +35,11 @@ class ImportServerConfigAction extends Action
 
         $this->modalWidth(Width::Large);
 
-        $this->authorize(fn () => user()?->can('update server'));
+        $this->authorize(fn () => user()?->can('create server'));
 
-        $this->modalHeading(fn (Server $server) => 'Import Configuration: ' . $server->name);
+        $this->modalHeading('Import Server Configuration');
 
-        $this->modalDescription('Import server configuration from a YAML file. This will update the server\'s settings, limits, allocations, and variable values.');
+        $this->modalDescription('Import server configuration from a YAML file to create a new server or update an existing one.');
 
         $this->schema([
             FileUpload::make('file')
@@ -49,23 +51,53 @@ class ImportServerConfigAction extends Action
                 ->storeFiles(false)
                 ->required()
                 ->maxSize(1024), // 1MB max
+            Select::make('mode')
+                ->label('Import Mode')
+                ->options([
+                    'create' => 'Create New Server',
+                    'update' => 'Update Existing Server',
+                ])
+                ->default('create')
+                ->required()
+                ->live(),
+            Select::make('server_id')
+                ->label('Target Server')
+                ->options(fn () => Server::whereIn('node_id', user()?->accessibleNodes()->pluck('id'))->pluck('name', 'id'))
+                ->searchable()
+                ->required()
+                ->visible(fn (callable $get) => $get('mode') === 'update'),
         ]);
 
-        $this->action(function (ServerConfigImporterService $service, Server $server, array $data): void {
-            /** @var TemporaryUploadedFile $file */
+        $this->action(function (ServerConfigImporterService $importService, ServerConfigCreatorService $createService, array $data): void {
+            /** @var UploadedFile $file */
             $file = $data['file'];
+            $mode = $data['mode'];
 
             try {
-                $service->fromFile($file, $server);
+                if ($mode === 'create') {
+                    $server = $createService->fromFile($file);
+                    
+                    Notification::make()
+                        ->title('Server Created')
+                        ->body("Server '{$server->name}' has been successfully created from configuration.")
+                        ->success()
+                        ->send();
 
-                Notification::make()
-                    ->title('Configuration Imported')
-                    ->body('Server configuration has been successfully imported and applied.')
-                    ->success()
-                    ->send();
+                    // Redirect to the new server's edit page
+                    redirect()->route('filament.admin.resources.servers.edit', ['record' => $server]);
+                } else {
+                    $server = Server::findOrFail($data['server_id']);
+                    $importService->fromFile($file, $server);
 
-                // Refresh the page to show updated values
-                redirect()->to(request()->url());
+                    Notification::make()
+                        ->title('Configuration Imported')
+                        ->body("Server '{$server->name}' has been successfully updated.")
+                        ->success()
+                        ->send();
+
+                    // Refresh the page
+                    redirect()->to(request()->url());
+                }
             } catch (InvalidFileUploadException $exception) {
                 Notification::make()
                     ->title('Import Failed')

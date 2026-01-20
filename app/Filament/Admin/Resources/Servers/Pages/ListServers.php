@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Servers\Pages;
 
 use App\Filament\Admin\Resources\Servers\ServerResource;
+use App\Filament\Components\Actions\ImportServerConfigAction;
 use App\Filament\Server\Pages\Console;
 use App\Models\Server;
 use App\Traits\Filament\CanCustomizeHeaderActions;
@@ -110,6 +111,7 @@ class ListServers extends ListRecords
     protected function getDefaultHeaderActions(): array
     {
         return [
+            ImportServerConfigAction::make(),
             CreateAction::make()
                 ->iconButton()->iconSize(IconSize::ExtraLarge)
                 ->icon('tabler-file-plus'),
