@@ -52,7 +52,8 @@ class ServerConfigController extends ApplicationApiController
      * Create server from configuration
      *
      * Create a new server from a YAML configuration file. The configuration must
-     * include a valid egg UUID that exists in the system.
+     * include a valid egg UUID that exists in the system. Optionally specify a
+     * node_id to create the server on a specific node.
      *
      * @throws InvalidFileUploadException
      */
@@ -60,11 +61,13 @@ class ServerConfigController extends ApplicationApiController
     {
         $request->validate([
             'file' => 'required|file|mimes:yaml,yml|max:1024',
+            'node_id' => 'sometimes|integer|exists:nodes,id',
         ]);
 
         $file = $request->file('file');
+        $nodeId = $request->input('node_id');
 
-        $server = $this->creatorService->fromFile($file);
+        $server = $this->creatorService->fromFile($file, $nodeId);
 
         return $this->fractal->item($server)
             ->transformWith($this->getTransformer(ServerTransformer::class))

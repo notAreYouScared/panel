@@ -6,6 +6,7 @@ use App\Exceptions\Service\InvalidFileUploadException;
 use App\Services\Servers\Sharing\ServerConfigCreatorService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Support\Enums\IconSize;
 use Filament\Support\Enums\Width;
@@ -48,14 +49,23 @@ class ImportServerConfigAction extends Action
                 ->storeFiles(false)
                 ->required()
                 ->maxSize(1024), // 1MB max
+            Select::make('node_id')
+                ->label('Node')
+                ->hint('Select the node where the server will be created')
+                ->options(fn () => user()?->accessibleNodes()->pluck('name', 'id'))
+                ->searchable()
+                ->required()
+                ->visible(fn () => user()?->accessibleNodes()->count() > 1)
+                ->default(fn () => user()?->accessibleNodes()->first()?->id),
         ]);
 
         $this->action(function (ServerConfigCreatorService $createService, array $data): void {
             /** @var UploadedFile $file */
             $file = $data['file'];
+            $nodeId = $data['node_id'] ?? null;
 
             try {
-                $server = $createService->fromFile($file);
+                $server = $createService->fromFile($file, $nodeId);
                 
                 Notification::make()
                     ->title('Server Created')

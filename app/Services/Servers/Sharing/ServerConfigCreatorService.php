@@ -16,7 +16,7 @@ use Symfony\Component\Yaml\Yaml;
 
 class ServerConfigCreatorService
 {
-    public function fromFile(UploadedFile $file): Server
+    public function fromFile(UploadedFile $file, ?int $nodeId = null): Server
     {
         if ($file->getError() !== UPLOAD_ERR_OK) {
             throw new InvalidFileUploadException('The selected file was not uploaded successfully');
@@ -28,10 +28,10 @@ class ServerConfigCreatorService
             throw new InvalidFileUploadException('Could not parse YAML file: ' . $exception->getMessage());
         }
 
-        return $this->createServer($parsed);
+        return $this->createServer($parsed, $nodeId);
     }
 
-    protected function createServer(array $config): Server
+    protected function createServer(array $config, ?int $nodeId = null): Server
     {
         // Validate egg UUID exists
         $eggUuid = Arr::get($config, 'egg.uuid');
@@ -51,11 +51,21 @@ class ServerConfigCreatorService
             );
         }
 
-        // Get the first accessible node
-        $node = Node::whereIn('id', user()?->accessibleNodes()->pluck('id'))->first();
-        
-        if (!$node) {
-            throw new InvalidFileUploadException('No accessible nodes found');
+        // Get the specified node or the first accessible node
+        if ($nodeId) {
+            $node = Node::whereIn('id', user()?->accessibleNodes()->pluck('id'))
+                ->where('id', $nodeId)
+                ->first();
+            
+            if (!$node) {
+                throw new InvalidFileUploadException('Selected node is not accessible or does not exist');
+            }
+        } else {
+            $node = Node::whereIn('id', user()?->accessibleNodes()->pluck('id'))->first();
+            
+            if (!$node) {
+                throw new InvalidFileUploadException('No accessible nodes found');
+            }
         }
 
         // Get or create allocations
