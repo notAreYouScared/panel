@@ -122,7 +122,8 @@ class ServerConfigImporterService
     }
 
     /**
-     * @param array<int, array<string, mixed>> $allocations
+     * @param  array<int, array<string, mixed>>  $allocations
+     *
      * @throws InvalidFileUploadException
      */
     protected function importAllocations(Server $server, array $allocations): void
