@@ -8,7 +8,6 @@ use App\Http\Requests\Api\Application\Servers\GetServerRequest;
 use App\Models\Server;
 use App\Services\Servers\Sharing\ServerConfigCreatorService;
 use App\Services\Servers\Sharing\ServerConfigExporterService;
-use App\Services\Servers\Sharing\ServerConfigImporterService;
 use App\Transformers\Api\Application\ServerTransformer;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
@@ -20,7 +19,6 @@ class ServerConfigController extends ApplicationApiController
 {
     public function __construct(
         private ServerConfigExporterService $exporterService,
-        private ServerConfigImporterService $importerService,
         private ServerConfigCreatorService $creatorService
     ) {
         parent::__construct();
@@ -48,29 +46,6 @@ class ServerConfigController extends ApplicationApiController
             'Content-Type' => 'application/x-yaml',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
-    }
-
-    /**
-     * Import server configuration (update existing)
-     *
-     * Import configuration from a YAML file to update an existing server's settings,
-     * limits, allocations, and variable values.
-     *
-     * @throws InvalidFileUploadException
-     */
-    public function import(Request $request, Server $server): JsonResponse
-    {
-        $request->validate([
-            'file' => 'required|file|mimes:yaml,yml|max:1024',
-        ]);
-
-        $file = $request->file('file');
-
-        $this->importerService->fromFile($file, $server);
-
-        return $this->fractal->item($server->refresh())
-            ->transformWith($this->getTransformer(ServerTransformer::class))
-            ->respond(200);
     }
 
     /**

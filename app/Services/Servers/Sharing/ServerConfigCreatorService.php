@@ -61,6 +61,7 @@ class ServerConfigCreatorService
         // Get or create allocations
         $allocations = Arr::get($config, 'allocations', []);
         $primaryAllocation = null;
+        $createdAllocations = [];
         
         if (!empty($allocations)) {
             foreach ($allocations as $allocationData) {
@@ -75,7 +76,7 @@ class ServerConfigCreatorService
                     ->whereNull('server_id')
                     ->first();
 
-                // If allocation doesn't exist, create it
+                // If allocation doesn't exist or is in use, create a new one
                 if (!$allocation) {
                     // Check if port is in use
                     $existingAllocation = Allocation::where('node_id', $node->id)
@@ -95,6 +96,8 @@ class ServerConfigCreatorService
                     ]);
                 }
 
+                $createdAllocations[] = $allocation;
+
                 // Set as primary allocation if specified
                 if ($isPrimary && !$primaryAllocation) {
                     $primaryAllocation = $allocation;
@@ -102,14 +105,35 @@ class ServerConfigCreatorService
             }
         }
 
-        // If no primary allocation specified, get any available allocation
+        // If no primary allocation specified, use the first created allocation or get/create one
         if (!$primaryAllocation) {
-            $primaryAllocation = Allocation::where('node_id', $node->id)
-                ->whereNull('server_id')
-                ->first();
-            
-            if (!$primaryAllocation) {
-                throw new InvalidFileUploadException('No available allocations found on node');
+            if (!empty($createdAllocations)) {
+                $primaryAllocation = $createdAllocations[0];
+            } else {
+                // No allocations in config, try to get an available one
+                $primaryAllocation = Allocation::where('node_id', $node->id)
+                    ->whereNull('server_id')
+                    ->first();
+                
+                // If no available allocation exists, create one
+                if (!$primaryAllocation) {
+                    // Get any IP from the node or use a default
+                    $existingAllocation = Allocation::where('node_id', $node->id)->first();
+                    if ($existingAllocation) {
+                        $ip = $existingAllocation->ip;
+                        $port = $this->findNextAvailablePort($node->id, $ip, 25565);
+                    } else {
+                        throw new InvalidFileUploadException('No allocations found on node and cannot determine IP address');
+                    }
+                    
+                    $primaryAllocation = Allocation::create([
+                        'node_id' => $node->id,
+                        'ip' => $ip,
+                        'port' => $port,
+                    ]);
+                }
+                
+                $createdAllocations[] = $primaryAllocation;
             }
         }
 
@@ -150,26 +174,10 @@ class ServerConfigCreatorService
         // Assign the primary allocation to the server
         $primaryAllocation->update(['server_id' => $server->id]);
 
-        // Assign additional allocations if any
-        if (!empty($allocations)) {
-            foreach ($allocations as $allocationData) {
-                $ip = Arr::get($allocationData, 'ip');
-                $port = Arr::get($allocationData, 'port');
-                $isPrimary = Arr::get($allocationData, 'is_primary', false);
-
-                if ($isPrimary) {
-                    continue; // Skip primary allocation, already assigned
-                }
-
-                $allocation = Allocation::where('node_id', $node->id)
-                    ->where('ip', $ip)
-                    ->where('port', $port)
-                    ->whereNull('server_id')
-                    ->first();
-
-                if ($allocation) {
-                    $allocation->update(['server_id' => $server->id]);
-                }
+        // Assign all other allocations to the server
+        foreach ($createdAllocations as $allocation) {
+            if ($allocation->id !== $primaryAllocation->id) {
+                $allocation->update(['server_id' => $server->id]);
             }
         }
 

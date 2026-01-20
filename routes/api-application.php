@@ -77,7 +77,6 @@ Route::prefix('/servers')->group(function () {
 
     // Server Config Import/Export
     Route::get('/{server:id}/config/export', [Application\Servers\ServerConfigController::class, 'export'])->name('api.application.servers.config.export');
-    Route::post('/{server:id}/config/import', [Application\Servers\ServerConfigController::class, 'import'])->name('api.application.servers.config.import');
     Route::post('/config/create', [Application\Servers\ServerConfigController::class, 'create'])->name('api.application.servers.config.create');
 
     Route::delete('/{server:id}', [Application\Servers\ServerController::class, 'delete']);

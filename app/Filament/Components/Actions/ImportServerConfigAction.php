@@ -3,12 +3,9 @@
 namespace App\Filament\Components\Actions;
 
 use App\Exceptions\Service\InvalidFileUploadException;
-use App\Models\Server;
-use App\Services\Servers\Sharing\ServerConfigImporterService;
 use App\Services\Servers\Sharing\ServerConfigCreatorService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Support\Enums\IconSize;
 use Filament\Support\Enums\Width;
@@ -39,7 +36,7 @@ class ImportServerConfigAction extends Action
 
         $this->modalHeading('Import Server Configuration');
 
-        $this->modalDescription('Import server configuration from a YAML file to create a new server or update an existing one.');
+        $this->modalDescription('Import server configuration from a YAML file to create a new server.');
 
         $this->schema([
             FileUpload::make('file')
@@ -51,53 +48,23 @@ class ImportServerConfigAction extends Action
                 ->storeFiles(false)
                 ->required()
                 ->maxSize(1024), // 1MB max
-            Select::make('mode')
-                ->label('Import Mode')
-                ->options([
-                    'create' => 'Create New Server',
-                    'update' => 'Update Existing Server',
-                ])
-                ->default('create')
-                ->required()
-                ->live(),
-            Select::make('server_id')
-                ->label('Target Server')
-                ->options(fn () => Server::whereIn('node_id', user()?->accessibleNodes()->pluck('id'))->pluck('name', 'id'))
-                ->searchable()
-                ->required()
-                ->visible(fn (callable $get) => $get('mode') === 'update'),
         ]);
 
-        $this->action(function (ServerConfigImporterService $importService, ServerConfigCreatorService $createService, array $data): void {
+        $this->action(function (ServerConfigCreatorService $createService, array $data): void {
             /** @var UploadedFile $file */
             $file = $data['file'];
-            $mode = $data['mode'];
 
             try {
-                if ($mode === 'create') {
-                    $server = $createService->fromFile($file);
-                    
-                    Notification::make()
-                        ->title('Server Created')
-                        ->body("Server '{$server->name}' has been successfully created from configuration.")
-                        ->success()
-                        ->send();
+                $server = $createService->fromFile($file);
+                
+                Notification::make()
+                    ->title('Server Created')
+                    ->body("Server '{$server->name}' has been successfully created from configuration.")
+                    ->success()
+                    ->send();
 
-                    // Redirect to the new server's edit page
-                    redirect()->route('filament.admin.resources.servers.edit', ['record' => $server]);
-                } else {
-                    $server = Server::findOrFail($data['server_id']);
-                    $importService->fromFile($file, $server);
-
-                    Notification::make()
-                        ->title('Configuration Imported')
-                        ->body("Server '{$server->name}' has been successfully updated.")
-                        ->success()
-                        ->send();
-
-                    // Refresh the page
-                    redirect()->to(request()->url());
-                }
+                // Redirect to the new server's edit page
+                redirect()->route('filament.admin.resources.servers.edit', ['record' => $server]);
             } catch (InvalidFileUploadException $exception) {
                 Notification::make()
                     ->title('Import Failed')
