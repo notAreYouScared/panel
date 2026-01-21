@@ -3,6 +3,7 @@
 namespace App\Services\Servers\Sharing;
 
 use App\Models\Server;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Yaml\Yaml;
 
 class ServerConfigExporterService
@@ -51,6 +52,12 @@ class ServerConfigExporterService
             $data['description'] = $server->description;
         }
 
+        // Export server icon if exists
+        $iconData = $this->exportServerIcon($server);
+        if ($iconData) {
+            $data['icon'] = $iconData;
+        }
+
         if ($includeAllocations && $server->allocations->isNotEmpty()) {
             $data['allocations'] = $server->allocations->map(function ($allocation) use ($server) {
                 return [
@@ -71,5 +78,29 @@ class ServerConfigExporterService
         }
 
         return Yaml::dump($data, 4, 2);
+    }
+
+    /**
+     * Export server icon as base64 encoded string with mime type.
+     *
+     * @return array<string, string>|null
+     */
+    protected function exportServerIcon(Server $server): ?array
+    {
+        foreach (array_keys(Server::IMAGE_FORMATS) as $ext) {
+            $path = Server::ICON_STORAGE_PATH . "/{$server->uuid}.{$ext}";
+            if (Storage::disk('public')->exists($path)) {
+                $contents = Storage::disk('public')->get($path);
+                $mimeType = Server::IMAGE_FORMATS[$ext];
+                
+                return [
+                    'data' => base64_encode($contents),
+                    'mime_type' => $mimeType,
+                    'extension' => $ext,
+                ];
+            }
+        }
+
+        return null;
     }
 }

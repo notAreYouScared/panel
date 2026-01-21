@@ -10,6 +10,7 @@ use App\Models\Server;
 use App\Models\ServerVariable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\Yaml\Yaml;
 
@@ -178,7 +179,46 @@ class ServerConfigCreatorService
             $this->importVariables($server, $config['variables']);
         }
 
+        // Import server icon if exists
+        if (isset($config['icon'])) {
+            $this->importServerIcon($server, $config['icon']);
+        }
+
         return $server;
+    }
+
+    /**
+     * Import server icon from base64 encoded data.
+     *
+     * @param  array<string, string>  $iconData
+     */
+    protected function importServerIcon(Server $server, array $iconData): void
+    {
+        $base64Data = Arr::get($iconData, 'data');
+        $extension = Arr::get($iconData, 'extension');
+        
+        if (!$base64Data || !$extension) {
+            return;
+        }
+
+        // Validate extension is supported
+        if (!array_key_exists($extension, Server::IMAGE_FORMATS)) {
+            return;
+        }
+
+        try {
+            $imageData = base64_decode($base64Data, true);
+            
+            if ($imageData === false) {
+                return;
+            }
+
+            $path = Server::ICON_STORAGE_PATH . "/{$server->uuid}.{$extension}";
+            Storage::disk('public')->put($path, $imageData);
+        } catch (\Exception $e) {
+            // Silently fail icon import - not critical
+            report($e);
+        }
     }
 
     /**
