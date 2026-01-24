@@ -23,6 +23,9 @@ return new class extends Migration
             $table->integer('progress')->nullable();
             $table->text('exception_message')->nullable();
             $table->timestamps();
+
+            // Composite index for finding specific job attempts
+            $table->index(['job_id', 'attempt']);
         });
     }
 

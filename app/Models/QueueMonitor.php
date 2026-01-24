@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Prunable;
-use Illuminate\Support\Facades\Hash;
 
 class QueueMonitor extends Model
 {
@@ -52,7 +51,7 @@ class QueueMonitor extends Model
      */
     public static function getJobId(JobContract $job): string|int
     {
-        return $job->payload()['uuid'] ?? Hash::make($job->getRawBody());
+        return $job->payload()['uuid'] ?? md5($job->getRawBody());
     }
 
     /**

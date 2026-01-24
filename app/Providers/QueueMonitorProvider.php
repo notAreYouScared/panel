@@ -14,6 +14,11 @@ use Illuminate\Support\ServiceProvider;
 class QueueMonitorProvider extends ServiceProvider
 {
     /**
+     * Maximum length for exception messages (TEXT field limit).
+     */
+    private const EXCEPTION_MESSAGE_MAX_LENGTH = 65535;
+
+    /**
      * Bootstrap services.
      */
     public function boot(): void
@@ -66,11 +71,10 @@ class QueueMonitorProvider extends ServiceProvider
             ->where('job_id', $jobId)
             ->where('failed', false)
             ->whereNull('finished_at')
-            ->each(function (QueueMonitor $monitor) {
-                $monitor->finished_at = now();
-                $monitor->failed = true;
-                $monitor->save();
-            });
+            ->update([
+                'finished_at' => now(),
+                'failed' => true,
+            ]);
     }
 
     /**
@@ -96,7 +100,7 @@ class QueueMonitorProvider extends ServiceProvider
 
         if ($exception !== null) {
             $attributes += [
-                'exception_message' => mb_strcut($exception->getMessage(), 0, 65535),
+                'exception_message' => mb_strcut($exception->getMessage(), 0, self::EXCEPTION_MESSAGE_MAX_LENGTH),
             ];
         }
 
