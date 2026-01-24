@@ -80,11 +80,11 @@ class QueueMonitor extends Model
      */
     public function hasSucceeded(): bool
     {
-        if (! $this->isFinished()) {
+        if (!$this->isFinished()) {
             return false;
         }
 
-        return ! $this->hasFailed();
+        return !$this->hasFailed();
     }
 
     /**

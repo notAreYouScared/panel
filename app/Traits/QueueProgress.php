@@ -9,13 +9,13 @@ trait QueueProgress
     /**
      * Update job progress.
      *
-     * @param int $progress Progress percentage (0-100)
+     * @param  int  $progress  Progress percentage (0-100)
      */
     public function setProgress(int $progress): void
     {
         $progress = min(100, max(0, $progress));
 
-        if (! $monitor = $this->getQueueMonitor()) {
+        if (!$monitor = $this->getQueueMonitor()) {
             return;
         }
 
@@ -29,15 +29,15 @@ trait QueueProgress
      */
     protected function getQueueMonitor(): ?QueueMonitor
     {
-        if (! property_exists($this, 'job')) {
+        if (!property_exists($this, 'job')) {
             return null;
         }
 
-        if (! $this->job) {
+        if (!$this->job) {
             return null;
         }
 
-        if (! $jobId = QueueMonitor::getJobId($this->job)) {
+        if (!$jobId = QueueMonitor::getJobId($this->job)) {
             return null;
         }
 
