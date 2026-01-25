@@ -112,7 +112,8 @@ class QueueMonitorResource extends Resource
                     ->sortable(),
                 ProgressBarColumn::make('progress')
                     ->label('Progress')
-                    ->maxValue(100)
+                    ->maxValue(1)
+                    ->dangerColor('oklch(0.723 0.219 149.579)')
                     ->helperLabel(fn ($state) => $state !== null ? "{$state}%" : '0%')
                     ->sortable(),
                 DateTimeColumn::make('started_at')
