@@ -75,6 +75,10 @@ Route::prefix('/servers')->group(function () {
     Route::post('/{server:id}/transfer', [Application\Servers\ServerManagementController::class, 'startTransfer'])->name('api.application.servers.transfer');
     Route::post('/{server:id}/transfer/cancel', [Application\Servers\ServerManagementController::class, 'cancelTransfer'])->name('api.application.servers.transfer.cancel');
 
+    // Server Config Import/Export
+    Route::get('/{server:id}/config/export', [Application\Servers\ServerConfigController::class, 'export'])->name('api.application.servers.config.export');
+    Route::post('/config/create', [Application\Servers\ServerConfigController::class, 'create'])->name('api.application.servers.config.create');
+
     Route::delete('/{server:id}', [Application\Servers\ServerController::class, 'delete']);
     Route::delete('/{server:id}/{force?}', [Application\Servers\ServerController::class, 'delete']);
 
