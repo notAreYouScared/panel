@@ -132,15 +132,17 @@ class ServerConfigCreatorService
         $serverName = Arr::get($config, 'name', 'Imported Server');
 
         $startupCommand = Arr::get($config, 'settings.startup');
-        if ($startupCommand === null) {
-            $startupCommand = $egg->startup_commands[0];
+        if ($startupCommand === null && is_array($egg->startup_commands)) {
+            $startupCommand = $egg->startup_commands[0] ?? '';
         }
+        $startupCommand = $startupCommand ?? '';
 
         $dockerImage = Arr::get($config, 'settings.image');
-        if ($dockerImage === null) {
+        if ($dockerImage === null && is_array($egg->docker_images)) {
             $dockerImagesArray = array_values($egg->docker_images);
             $dockerImage = $dockerImagesArray[0] ?? '';
         }
+        $dockerImage = $dockerImage ?? '';
 
         $server = Server::create([
             'uuid' => Str::uuid()->toString(),

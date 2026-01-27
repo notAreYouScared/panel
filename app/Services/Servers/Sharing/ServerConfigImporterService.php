@@ -95,7 +95,7 @@ class ServerConfigImporterService
     }
 
     /**
-     * @param  array[]  $variables
+     * @param  array<int, array{env_variable: string, value: string|null}>  $variables
      */
     protected function importVariables(Server $server, array $variables): void
     {
@@ -103,6 +103,7 @@ class ServerConfigImporterService
             $envVariable = Arr::get($variable, 'env_variable');
             $value = Arr::get($variable, 'value');
 
+            /** @var EggVariable|null $eggVariable */
             $eggVariable = EggVariable::where('egg_id', $server->egg_id)
                 ->where('env_variable', $envVariable)
                 ->first();
