@@ -22,13 +22,13 @@ class ServerConfigCreatorService
     public function fromFile(UploadedFile $file, ?int $nodeId = null): Server
     {
         if ($file->getError() !== UPLOAD_ERR_OK) {
-            throw new InvalidFileUploadException('The selected file was not uploaded successfully');
+            throw new InvalidFileUploadException(trans('admin/server.import_errors.file_error'));
         }
 
         try {
             $parsed = Yaml::parse($file->getContent());
         } catch (\Exception $exception) {
-            throw new InvalidFileUploadException('Could not parse YAML file: ' . $exception->getMessage());
+            throw new InvalidFileUploadException(trans('admin/server.import_errors.parse_error_desc', ['error' => $exception->getMessage()]));
         }
 
         return $this->createServer($parsed, $nodeId);
@@ -48,16 +48,17 @@ class ServerConfigCreatorService
         $eggName = Arr::get($config, 'egg.name');
 
         if (!$eggUuid) {
-            throw new InvalidFileUploadException('Egg UUID is required in the configuration file');
+            throw new InvalidFileUploadException(trans('admin/server.import_errors.egg_uuid_required'));
         }
 
         $egg = Egg::where('uuid', $eggUuid)->first();
 
         if (!$egg) {
             throw new InvalidFileUploadException(
-                "Egg with UUID '{$eggUuid}'" .
-                ($eggName ? " (name: {$eggName})" : '') .
-                ' does not exist in the system'
+                trans('admin/server.import_errors.egg_not_found_desc', [
+                    'uuid' => $eggUuid,
+                    'name' => $eggName ?: trans('admin/server.none'),
+                ])
             );
         }
 
@@ -67,13 +68,13 @@ class ServerConfigCreatorService
                 ->first();
 
             if (!$node) {
-                throw new InvalidFileUploadException('Selected node is not accessible or does not exist');
+                throw new InvalidFileUploadException(trans('admin/server.import_errors.node_not_accessible'));
             }
         } else {
             $node = Node::whereIn('id', user()?->accessibleNodes()->pluck('id'))->first();
 
             if (!$node) {
-                throw new InvalidFileUploadException('No accessible nodes found');
+                throw new InvalidFileUploadException(trans('admin/server.import_errors.no_nodes'));
             }
         }
 
@@ -125,7 +126,7 @@ class ServerConfigCreatorService
         $owner = user();
 
         if (!$owner) {
-            throw new InvalidFileUploadException('No authenticated user found');
+            throw new InvalidFileUploadException(trans('admin/server.import_errors.no_user'));
         }
 
         $serverName = Arr::get($config, 'name', 'Imported Server');
@@ -263,6 +264,6 @@ class ServerConfigCreatorService
             $port++;
         }
 
-        throw new InvalidFileUploadException("Could not find an available port for IP {$ip} starting from port {$startPort}");
+        throw new InvalidFileUploadException(trans('admin/server.import_errors.port_exhausted_desc', ['ip' => $ip, 'port' => $startPort]));
     }
 }
