@@ -258,6 +258,11 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
         return $this->hasMany(UserSSHKey::class);
     }
 
+    public function passkeys(): HasMany
+    {
+        return $this->hasMany(Passkey::class);
+    }
+
     /**
      * Returns all the activity logs where this user is the subject — not to
      * be confused by activity logs where this user is the _actor_.

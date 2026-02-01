@@ -8,6 +8,7 @@ use App\Extensions\OAuth\OAuthService;
 use App\Facades\Activity;
 use App\Models\ActivityLog;
 use App\Models\ApiKey;
+use App\Models\Passkey;
 use App\Models\User;
 use App\Models\UserSSHKey;
 use App\Services\Helpers\LanguageService;
@@ -234,6 +235,82 @@ class EditProfile extends BaseEditProfile
                     ->map(fn (MultiFactorAuthenticationProvider $multiFactorAuthenticationProvider) => Group::make($multiFactorAuthenticationProvider->getManagementSchemaComponents())
                         ->statePath($multiFactorAuthenticationProvider->getId()))
                     ->all()),
+            Tab::make('passkeys')
+                ->label(trans('profile.tabs.passkeys'))
+                ->icon(TablerIcon::Fingerprint)
+                ->visible(fn () => class_exists('Spatie\\LaravelPasskeys\\PasskeysServiceProvider'))
+                ->schema([
+                    Grid::make(5)
+                        ->schema([
+                            Section::make(trans('profile.register_passkey'))->columnSpan(3)
+                                ->description(trans('profile.passkeys_description'))
+                                ->schema([
+                                    TextInput::make('passkey_name')
+                                        ->label(trans('profile.name'))
+                                        ->placeholder(trans('profile.passkey_name_placeholder'))
+                                        ->helperText(trans('profile.passkey_name_help'))
+                                        ->live(),
+                                    Actions::make([
+                                        Action::make('register_passkey')
+                                            ->label(trans('profile.register_passkey_button'))
+                                            ->icon(TablerIcon::Plus)
+                                            ->color('primary')
+                                            ->requiresConfirmation()
+                                            ->modalHeading(trans('profile.register_passkey_modal_heading'))
+                                            ->modalDescription(trans('profile.register_passkey_modal_description'))
+                                            ->modalSubmitActionLabel(trans('profile.register'))
+                                            ->action(function (array $data) {
+                                                // This will be handled by the JavaScript WebAuthn API
+                                                // via Livewire events when the package is installed
+                                                Notification::make()
+                                                    ->title(trans('profile.passkey_registration_started'))
+                                                    ->info()
+                                                    ->send();
+                                            }),
+                                    ]),
+                                ]),
+                            Section::make(trans('profile.existing_passkeys'))->columnSpan(2)
+                                ->description(trans('profile.manage_passkeys_description'))
+                                ->schema([
+                                    Repeater::make('user_passkeys')
+                                        ->relationship('passkeys')
+                                        ->label('')
+                                        ->addable(false)
+                                        ->reorderable(false)
+                                        ->schema([
+                                            TextEntry::make('name')
+                                                ->label(trans('profile.name')),
+                                            TextEntry::make('created_at')
+                                                ->label(trans('profile.created'))
+                                                ->dateTime(),
+                                            TextEntry::make('last_used_at')
+                                                ->label(trans('profile.last_used'))
+                                                ->dateTime()
+                                                ->placeholder(trans('profile.never_used')),
+                                        ])
+                                        ->itemActions([
+                                            \Filament\Forms\Components\Actions\Action::make('delete')
+                                                ->label(trans('profile.delete'))
+                                                ->icon(TablerIcon::Trash)
+                                                ->color('danger')
+                                                ->requiresConfirmation()
+                                                ->action(function ($record) {
+                                                    $record->delete();
+
+                                                    Activity::event('user:passkey.deleted')
+                                                        ->property('name', $record->name)
+                                                        ->property('credential_id', $record->credential_id)
+                                                        ->log();
+
+                                                    Notification::make()
+                                                        ->title(trans('profile.passkey_deleted'))
+                                                        ->success()
+                                                        ->send();
+                                                }),
+                                        ]),
+                                ]),
+                        ]),
+                ]),
             Tab::make('api_keys')
                 ->label(trans('profile.tabs.api_keys'))
                 ->icon(TablerIcon::Key)
