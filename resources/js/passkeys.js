@@ -4,26 +4,34 @@
  * Listens for Livewire events to register passkeys using the WebAuthn API
  */
 
-// Helper to convert base64url to ArrayBuffer
-function base64urlToArrayBuffer(base64url) {
-    const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
+// Helper to convert base64url to Uint8Array
+function base64urlToUint8Array(base64url) {
+    // Add padding if needed
+    const padding = '='.repeat((4 - (base64url.length % 4)) % 4);
+    const base64 = (base64url + padding)
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+    
+    const rawData = atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
     }
-    return bytes.buffer;
+    return outputArray;
 }
 
-// Helper to convert ArrayBuffer to base64url
-function arrayBufferToBase64url(buffer) {
-    const bytes = new Uint8Array(buffer);
+// Helper to convert Uint8Array to base64url
+function uint8ArrayToBase64url(uint8Array) {
     let binary = '';
-    for (let i = 0; i < bytes.length; i++) {
-        binary += String.fromCharCode(bytes[i]);
+    const len = uint8Array.byteLength;
+    for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(uint8Array[i]);
     }
-    const base64 = btoa(binary);
-    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    return btoa(binary)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
 }
 
 // Register passkey
@@ -40,23 +48,29 @@ async function registerPasskey(name) {
         });
 
         if (!optionsResponse.ok) {
-            throw new Error('Failed to get registration options');
+            const errorData = await optionsResponse.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Failed to get registration options');
         }
 
         const options = await optionsResponse.json();
 
         // Step 2: Convert options for WebAuthn API
         const publicKeyOptions = {
-            ...options,
-            challenge: base64urlToArrayBuffer(options.challenge),
+            challenge: base64urlToUint8Array(options.challenge),
+            rp: options.rp,
             user: {
-                ...options.user,
-                id: base64urlToArrayBuffer(options.user.id),
+                id: base64urlToUint8Array(options.user.id),
+                name: options.user.name,
+                displayName: options.user.displayName,
             },
-            excludeCredentials: options.excludeCredentials?.map(cred => ({
-                ...cred,
-                id: base64urlToArrayBuffer(cred.id),
-            })) || [],
+            pubKeyCredParams: options.pubKeyCredParams,
+            timeout: options.timeout,
+            attestation: options.attestation,
+            authenticatorSelection: options.authenticatorSelection,
+            excludeCredentials: (options.excludeCredentials || []).map(cred => ({
+                type: cred.type,
+                id: base64urlToUint8Array(cred.id),
+            })),
         };
 
         // Step 3: Create credential using WebAuthn
@@ -71,11 +85,11 @@ async function registerPasskey(name) {
         // Step 4: Prepare credential data for server
         const credentialData = {
             id: credential.id,
-            rawId: arrayBufferToBase64url(credential.rawId),
+            rawId: uint8ArrayToBase64url(new Uint8Array(credential.rawId)),
             type: credential.type,
             response: {
-                clientDataJSON: arrayBufferToBase64url(credential.response.clientDataJSON),
-                attestationObject: arrayBufferToBase64url(credential.response.attestationObject),
+                clientDataJSON: uint8ArrayToBase64url(new Uint8Array(credential.response.clientDataJSON)),
+                attestationObject: uint8ArrayToBase64url(new Uint8Array(credential.response.attestationObject)),
             },
         };
 
@@ -93,64 +107,73 @@ async function registerPasskey(name) {
         });
 
         if (!registerResponse.ok) {
-            const error = await registerResponse.json();
-            throw new Error(error.message || 'Failed to register passkey');
+            const errorData = await registerResponse.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Failed to register passkey');
         }
 
-        // Success!
-        window.dispatchEvent(new CustomEvent('passkey-registered', {
-            detail: { name: name }
-        }));
+        const result = await registerResponse.json();
 
-        // Show success notification
-        if (window.Livewire) {
-            window.Livewire.dispatch('notify', {
+        // Success!
+        console.log('Passkey registered successfully:', result);
+
+        // Show success notification via Filament
+        if (window.$wire) {
+            window.$wire.call('$dispatch', 'notify', {
                 type: 'success',
                 message: 'Passkey registered successfully!'
             });
         }
 
-        // Reload the page to show the new passkey
-        window.location.reload();
+        // Reload the page to show the new passkey in the list
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
 
     } catch (error) {
         console.error('Passkey registration failed:', error);
         
-        // Show error notification
-        if (window.Livewire) {
-            window.Livewire.dispatch('notify', {
+        let errorMessage = 'Failed to register passkey. Please try again.';
+        
+        if (error.name === 'NotAllowedError') {
+            errorMessage = 'Passkey registration was cancelled or not allowed.';
+        } else if (error.name === 'InvalidStateError') {
+            errorMessage = 'This passkey is already registered.';
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+
+        // Show error notification via Filament
+        if (window.$wire) {
+            window.$wire.call('$dispatch', 'notify', {
                 type: 'error',
-                message: error.message || 'Failed to register passkey. Please try again.'
+                message: errorMessage
             });
         } else {
-            alert('Failed to register passkey: ' + (error.message || 'Unknown error'));
+            alert(errorMessage);
         }
     }
 }
 
 // Listen for Livewire events
-if (window.Livewire) {
-    // For Livewire v3
-    document.addEventListener('livewire:initialized', () => {
-        Livewire.on('passkey-register', (event) => {
-            const name = event.name || event[0]?.name || 'My Passkey';
-            registerPasskey(name);
-        });
-    });
-} else {
-    // Fallback: wait for Livewire to load
-    document.addEventListener('DOMContentLoaded', () => {
-        const checkLivewire = setInterval(() => {
-            if (window.Livewire) {
-                clearInterval(checkLivewire);
-                Livewire.on('passkey-register', (event) => {
-                    const name = event.name || event[0]?.name || 'My Passkey';
-                    registerPasskey(name);
-                });
-            }
-        }, 100);
-    });
-}
+document.addEventListener('DOMContentLoaded', () => {
+    // Wait for Livewire to be ready
+    const initPasskeys = () => {
+        if (window.Livewire) {
+            Livewire.on('passkey-register', (data) => {
+                // Handle both event formats
+                const name = (typeof data === 'object' && data.name) || 
+                           (Array.isArray(data) && data[0]?.name) || 
+                           'My Passkey';
+                registerPasskey(name);
+            });
+            console.log('Passkeys listener initialized');
+        } else {
+            setTimeout(initPasskeys, 100);
+        }
+    };
+    
+    initPasskeys();
+});
 
 // Also expose globally for manual testing
 window.registerPasskey = registerPasskey;
