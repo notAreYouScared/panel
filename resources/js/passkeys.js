@@ -38,7 +38,7 @@ function uint8ArrayToBase64url(uint8Array) {
 async function registerPasskey(name) {
     try {
         // Step 1: Get registration options from server
-        const optionsResponse = await fetch('/passkeys/register/options', {
+        const optionsResponse = await fetch('/auth/passkeys/register/options', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -94,7 +94,7 @@ async function registerPasskey(name) {
         };
 
         // Step 5: Send credential to server
-        const registerResponse = await fetch('/passkeys/register', {
+        const registerResponse = await fetch('/auth/passkeys/register', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

@@ -13,10 +13,12 @@ Route::prefix('oauth')->group(function () {
 
 // Passkeys routes - WebAuthn endpoints for passkey registration and authentication
 Route::post('/passkeys/register/options', [PasskeyController::class, 'registerOptions'])
+    ->withoutMiddleware('guest')
     ->middleware('auth')
     ->name('passkeys.register.options');
 
 Route::post('/passkeys/register', [PasskeyController::class, 'register'])
+    ->withoutMiddleware('guest')
     ->middleware('auth')
     ->name('passkeys.register');
 
