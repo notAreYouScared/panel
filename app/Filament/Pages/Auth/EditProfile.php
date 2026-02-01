@@ -281,7 +281,7 @@ class EditProfile extends BaseEditProfile
                             Section::make(trans('profile.existing_passkeys'))->columnSpan(2)
                                 ->description(trans('profile.manage_passkeys_description'))
                                 ->schema([
-                                    Repeater::make('user_passkeys')
+                                    Repeater::make('passkeys')
                                         ->relationship('passkeys')
                                         ->label('')
                                         ->addable(false)
