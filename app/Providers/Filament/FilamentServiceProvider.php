@@ -71,7 +71,7 @@ class FilamentServiceProvider extends ServiceProvider
 
         FilamentView::registerRenderHook(
             PanelsRenderHook::SCRIPTS_AFTER,
-            fn () => Blade::render("@vite(['resources/js/app.js'])"),
+            fn () => Blade::render("@vite(['resources/js/app.js', 'resources/js/passkeys.js'])"),
         );
 
         on('dehydrate', function (Component $component) {
