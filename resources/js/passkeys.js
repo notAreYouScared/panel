@@ -37,6 +37,21 @@ function uint8ArrayToBase64url(uint8Array) {
 // Register passkey
 async function registerPasskey(name) {
     try {
+        // Check if WebAuthn is supported
+        if (!window.PublicKeyCredential) {
+            throw new Error('WebAuthn is not supported in this browser. Please use a modern browser like Chrome, Firefox, Safari, or Edge.');
+        }
+
+        // Check if we're in a secure context (HTTPS or localhost)
+        if (!window.isSecureContext) {
+            throw new Error('WebAuthn requires a secure context (HTTPS). Please access this site over HTTPS.');
+        }
+
+        // Check if credentials API is available
+        if (!navigator.credentials) {
+            throw new Error('Credentials API is not available in this browser.');
+        }
+
         // Step 1: Get registration options from server
         const optionsResponse = await fetch('/auth/passkeys/register/options', {
             method: 'POST',
@@ -134,10 +149,15 @@ async function registerPasskey(name) {
         
         let errorMessage = 'Failed to register passkey. Please try again.';
         
+        // Provide specific error messages for common issues
         if (error.name === 'NotAllowedError') {
             errorMessage = 'Passkey registration was cancelled or not allowed.';
         } else if (error.name === 'InvalidStateError') {
             errorMessage = 'This passkey is already registered.';
+        } else if (error.name === 'NotSupportedError') {
+            errorMessage = 'Your browser does not support passkeys. Please use Chrome 67+, Firefox 60+, Safari 13+, or Edge 18+.';
+        } else if (error.name === 'SecurityError') {
+            errorMessage = 'Security error: Passkeys require HTTPS (or localhost for testing).';
         } else if (error.message) {
             errorMessage = error.message;
         }
