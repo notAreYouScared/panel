@@ -259,12 +259,14 @@ class EditProfile extends BaseEditProfile
                                             ->modalHeading(trans('profile.register_passkey_modal_heading'))
                                             ->modalDescription(trans('profile.register_passkey_modal_description'))
                                             ->modalSubmitActionLabel(trans('profile.register'))
-                                            ->action(function (array $data) {
+                                            ->action(function (Get $get) {
                                                 // Note: The actual WebAuthn registration is handled by the
                                                 // spatie/laravel-passkeys package via JavaScript and the
                                                 // routes defined in routes/auth.php. This action triggers
                                                 // the frontend flow which then calls the registration endpoints.
                                                 // See: https://spatie.be/docs/laravel-passkeys
+                                                
+                                                $passkeyName = $get('passkey_name') ?: trans('profile.default_passkey_name');
                                                 
                                                 Notification::make()
                                                     ->title(trans('profile.passkey_registration_started'))
@@ -272,7 +274,7 @@ class EditProfile extends BaseEditProfile
                                                     ->send();
                                                 
                                                 // The Livewire component will dispatch browser WebAuthn API
-                                                $this->dispatch('passkey-register', name: $data['passkey_name'] ?? trans('profile.default_passkey_name'));
+                                                $this->dispatch('passkey-register', name: $passkeyName);
                                             }),
                                     ]),
                                 ]),
