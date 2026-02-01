@@ -260,12 +260,19 @@ class EditProfile extends BaseEditProfile
                                             ->modalDescription(trans('profile.register_passkey_modal_description'))
                                             ->modalSubmitActionLabel(trans('profile.register'))
                                             ->action(function (array $data) {
-                                                // This will be handled by the JavaScript WebAuthn API
-                                                // via Livewire events when the package is installed
+                                                // Note: The actual WebAuthn registration is handled by the
+                                                // spatie/laravel-passkeys package via JavaScript and the
+                                                // routes defined in routes/auth.php. This action triggers
+                                                // the frontend flow which then calls the registration endpoints.
+                                                // See: https://spatie.be/docs/laravel-passkeys
+                                                
                                                 Notification::make()
                                                     ->title(trans('profile.passkey_registration_started'))
                                                     ->info()
                                                     ->send();
+                                                
+                                                // The Livewire component will dispatch browser WebAuthn API
+                                                $this->dispatch('passkey-register', name: $data['passkey_name'] ?? 'Passkey');
                                             }),
                                     ]),
                                 ]),

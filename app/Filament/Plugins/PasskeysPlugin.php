@@ -21,13 +21,16 @@ class PasskeysPlugin implements Plugin
 
     public function register(Panel $panel): void
     {
-        // Register passkeys functionality with the panel
-        // This will add passkey management to the profile page
+        // This plugin doesn't need to register additional resources or pages
+        // The passkey functionality is integrated directly into the EditProfile page
+        // which is already part of the Filament authentication system
     }
 
     public function boot(Panel $panel): void
     {
-        // Boot passkeys functionality
+        // This plugin doesn't need boot-time initialization
+        // The passkey routes are conditionally registered in routes/auth.php
+        // and the UI is part of the EditProfile page schema
     }
 
     public function isEnabled(): bool
