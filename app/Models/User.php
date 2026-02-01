@@ -258,6 +258,12 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
         return $this->hasMany(UserSSHKey::class);
     }
 
+    /**
+     * Returns all passkeys (WebAuthn credentials) registered by the user.
+     * Passkeys enable passwordless authentication using biometrics, PINs, or security keys.
+     *
+     * @return HasMany<Passkey, $this>
+     */
     public function passkeys(): HasMany
     {
         return $this->hasMany(Passkey::class);
