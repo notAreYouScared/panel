@@ -8,7 +8,6 @@ use App\Extensions\OAuth\OAuthService;
 use App\Facades\Activity;
 use App\Models\ActivityLog;
 use App\Models\ApiKey;
-use App\Models\Passkey;
 use App\Models\User;
 use App\Models\UserSSHKey;
 use App\Services\Helpers\LanguageService;
@@ -238,7 +237,6 @@ class EditProfile extends BaseEditProfile
             Tab::make('passkeys')
                 ->label(trans('profile.tabs.passkeys'))
                 ->icon(TablerIcon::Fingerprint)
-                ->visible(fn () => class_exists('Spatie\\LaravelPasskeys\\PasskeysServiceProvider'))
                 ->schema([
                     Grid::make(5)
                         ->schema([
@@ -265,14 +263,14 @@ class EditProfile extends BaseEditProfile
                                                 // routes defined in routes/auth.php. This action triggers
                                                 // the frontend flow which then calls the registration endpoints.
                                                 // See: https://spatie.be/docs/laravel-passkeys
-                                                
+
                                                 $passkeyName = $get('passkey_name') ?: trans('profile.default_passkey_name');
-                                                
+
                                                 Notification::make()
                                                     ->title(trans('profile.passkey_registration_started'))
                                                     ->info()
                                                     ->send();
-                                                
+
                                                 // The Livewire component will dispatch browser WebAuthn API
                                                 $this->dispatch('passkey-register', name: $passkeyName);
                                             }),
@@ -296,26 +294,6 @@ class EditProfile extends BaseEditProfile
                                                 ->label(trans('profile.last_used'))
                                                 ->dateTime()
                                                 ->placeholder(trans('profile.never_used')),
-                                        ])
-                                        ->itemActions([
-                                            \Filament\Forms\Components\Actions\Action::make('delete')
-                                                ->label(trans('profile.delete'))
-                                                ->icon(TablerIcon::Trash)
-                                                ->color('danger')
-                                                ->requiresConfirmation()
-                                                ->action(function ($record) {
-                                                    $record->delete();
-
-                                                    Activity::event('user:passkey.deleted')
-                                                        ->property('name', $record->name)
-                                                        ->property('credential_id', $record->credential_id)
-                                                        ->log();
-
-                                                    Notification::make()
-                                                        ->title(trans('profile.passkey_deleted'))
-                                                        ->success()
-                                                        ->send();
-                                                }),
                                         ]),
                                 ]),
                         ]),

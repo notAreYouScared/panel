@@ -16,15 +16,14 @@ if (class_exists('Spatie\LaravelPasskeys\Http\Controllers\PasskeyController')) {
     Route::post('/passkeys/register/options', [\Spatie\LaravelPasskeys\Http\Controllers\PasskeyController::class, 'registerOptions'])
         ->middleware('auth')
         ->name('passkeys.register.options');
-    
+
     Route::post('/passkeys/register', [\Spatie\LaravelPasskeys\Http\Controllers\PasskeyController::class, 'register'])
         ->middleware('auth')
         ->name('passkeys.register');
-    
+
     Route::post('/passkeys/authenticate/options', [\Spatie\LaravelPasskeys\Http\Controllers\PasskeyController::class, 'authenticateOptions'])
         ->name('passkeys.authenticate.options');
-    
+
     Route::post('/passkeys/authenticate', [\Spatie\LaravelPasskeys\Http\Controllers\PasskeyController::class, 'authenticate'])
         ->name('passkeys.authenticate');
 }
-

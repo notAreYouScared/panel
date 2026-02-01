@@ -68,7 +68,7 @@ return [
     'no_oauth' => 'No Accounts Linked',
     'no_api_keys' => 'No API Keys',
     'no_ssh_keys' => 'No SSH Keys',
-    
+
     // Passkeys
     'register_passkey' => 'Register Passkey',
     'register_passkey_button' => 'Register New Passkey',
