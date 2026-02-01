@@ -87,4 +87,5 @@ return [
     'last_used' => 'Last Used',
     'created' => 'Created',
     'register' => 'Register',
+    'default_passkey_name' => 'My Passkey',
 ];

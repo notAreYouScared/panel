@@ -272,7 +272,7 @@ class EditProfile extends BaseEditProfile
                                                     ->send();
                                                 
                                                 // The Livewire component will dispatch browser WebAuthn API
-                                                $this->dispatch('passkey-register', name: $data['passkey_name'] ?? 'Passkey');
+                                                $this->dispatch('passkey-register', name: $data['passkey_name'] ?? trans('profile.default_passkey_name'));
                                             }),
                                     ]),
                                 ]),
