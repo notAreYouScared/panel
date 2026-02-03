@@ -14,6 +14,7 @@ class ServerLimitsData extends Data
         public int $io,
         public int $cpu,
         public ?string $threads,
+        /** @deprecated Use oom_killer instead. Kept for backward compatibility with Pterodactyl 1.X API */
         public bool $oom_disabled,
         public bool $oom_killer,
     ) {}

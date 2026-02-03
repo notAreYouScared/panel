@@ -60,7 +60,7 @@ class ServerDataIntegrationTest extends ApplicationApiIntegrationTestCase
         $user = User::factory()->create();
         $servers = Server::factory()->count(3)->create(['owner_id' => $user->id]);
 
-        $dataItems = $servers->map(fn($server) => ServerData::fromModel($server))->toArray();
+        $dataItems = $servers->map(fn(Server $server) => ServerData::fromModel($server))->toArray();
         $collection = ServerData::collection($dataItems, true);
 
         // Should have Fractal list structure

@@ -86,7 +86,7 @@ class PanelDataTest extends TestCase
         $user = User::factory()->create();
         $servers = Server::factory()->count(3)->create(['owner_id' => $user->id]);
 
-        $dataItems = $servers->map(fn($server) => ServerData::fromModel($server))->toArray();
+        $dataItems = $servers->map(fn(Server $server) => ServerData::fromModel($server))->toArray();
         $collection = ServerData::collection($dataItems, true);
 
         // Should have list structure
@@ -111,7 +111,7 @@ class PanelDataTest extends TestCase
         $user = User::factory()->create();
         $servers = Server::factory()->count(3)->create(['owner_id' => $user->id]);
 
-        $dataItems = $servers->map(fn($server) => ServerData::fromModel($server))->toArray();
+        $dataItems = $servers->map(fn(Server $server) => ServerData::fromModel($server))->toArray();
         $collection = ServerData::collection($dataItems, false);
 
         // Should be a simple array
