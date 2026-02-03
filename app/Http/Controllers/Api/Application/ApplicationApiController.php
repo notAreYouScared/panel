@@ -101,8 +101,9 @@ abstract class ApplicationApiController extends Controller
         }
 
         // Get the first item to determine the class
-        $result = !empty($items) && $items[0] instanceof PanelData
-            ? $items[0]::collection($items, true)
+        $firstItem = !empty($items) ? reset($items) : null;
+        $result = $firstItem instanceof PanelData
+            ? $firstItem::collection($items, true)
             : ['object' => 'list', 'data' => []];
 
         if ($status === 200) {

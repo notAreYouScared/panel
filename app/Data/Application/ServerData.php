@@ -27,8 +27,9 @@ class ServerData extends PanelData
         public ServerContainerData $container,
         public string $created_at,
         public string $updated_at,
+        /** @var array<string, mixed> */
         #[Computed]
-        public Optional|array $relationships = new Optional(),
+        public array $relationships = [],
     ) {}
 
     /**
@@ -65,7 +66,7 @@ class ServerData extends PanelData
     /**
      * Format timestamp to ISO-8601 format for API responses.
      */
-    protected static function formatTimestamp(\Carbon\CarbonInterface $timestamp): string
+    private static function formatTimestamp(\Carbon\CarbonInterface $timestamp): string
     {
         return $timestamp
             ->setTimezone('UTC')
