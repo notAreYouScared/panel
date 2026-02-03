@@ -83,12 +83,12 @@ class ServerController extends ApplicationApiController
     public function index(): array
     {
         $servers = Server::paginate(50);
-        
-        $dataItems = $servers->map(function ($server) {
+
+        $dataItems = $servers->map(function (Server $server) {
             $environment = $this->environmentService->handle($server);
             return ServerData::fromModel($server, $environment);
         });
-        
+
         // Use helper method that automatically sets Fractal mode
         return $this->dataCollection($dataItems);
     }

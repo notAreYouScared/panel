@@ -76,7 +76,7 @@ abstract class ApplicationApiController extends Controller
     protected function data(PanelData $data, int $status = 200): JsonResponse|array
     {
         $data->setFractal(true);
-        
+
         if ($status === 200) {
             return $data->toArray();
         }
