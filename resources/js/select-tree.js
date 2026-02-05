@@ -79,5 +79,6 @@ document.addEventListener('alpine:init', () => {
                 this.state = e.detail;
             });
         }
+    };
     }
 });
