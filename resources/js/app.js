@@ -1,3 +1,6 @@
+// Import select-tree component
+import './select-tree.js';
+
 (() => {
   if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') return;
   navigator.clipboard = navigator.clipboard || {};
