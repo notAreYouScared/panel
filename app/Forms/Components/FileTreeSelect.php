@@ -10,7 +10,8 @@ class FileTreeSelect extends SelectTree
 {
     protected string $rootPath = '/';
     
-    protected int $maxDepth = 10;
+    // Reduced from 10 to 2 for performance - only loads 2 levels initially
+    protected int $maxDepth = 2;
     
     /**
      * Set the root path to start scanning from
@@ -153,10 +154,13 @@ class FileTreeSelect extends SelectTree
                     'children' => [],
                 ];
                 
-                // Recursively scan subdirectories
-                $children = $this->scanDirectory($repository, $fullPath, $depth + 1);
-                if (count($children) > 0) {
-                    $node['children'] = $children;
+                // Only recursively scan subdirectories if we're at depth 0
+                // This prevents deep recursive scans that timeout on large structures
+                if ($depth === 0) {
+                    $children = $this->scanDirectory($repository, $fullPath, $depth + 1);
+                    if (count($children) > 0) {
+                        $node['children'] = $children;
+                    }
                 }
                 
                 $tree[] = $node;
