@@ -64,7 +64,7 @@ class FileTreeSelect extends SelectTree
     {
         try {
             $server = Filament::getTenant();
-            if (!$server) {
+            if ($server === null) {
                 return [];
             }
             
@@ -110,7 +110,7 @@ class FileTreeSelect extends SelectTree
                 
                 // Recursively scan subdirectories
                 $children = $this->scanDirectory($repository, $fullPath, $depth + 1);
-                if (!empty($children)) {
+                if (count($children) > 0) {
                     $node['children'] = $children;
                 }
                 

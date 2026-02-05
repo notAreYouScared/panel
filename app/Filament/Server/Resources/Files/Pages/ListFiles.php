@@ -775,6 +775,8 @@ class ListFiles extends ListRecords
             $downPath
         );
         
-        return implode('/', $relativeParts) ?: '.';
+        // Return the relative path, or '.' if the result is empty
+        $result = implode('/', $relativeParts);
+        return $result !== '' ? $result : '.';
     }
 }
