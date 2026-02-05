@@ -8,7 +8,7 @@
     top: 0;
     bottom: 0;
     width: 1px;
-    background-color: #d1d5db;
+    background-color: oklch(0.705 0.015 286.067);
 }
 
 html.dark .treeselect-list__group-container::before {
@@ -22,7 +22,7 @@ html.dark .treeselect-list__group-container::before {
     top: 50%;
     width: 10px;
     height: 1px;
-    background-color: #d1d5db;
+    background-color: oklch(0.705 0.015 286.067);
 }
 
 html.dark .treeselect-list__item::before {

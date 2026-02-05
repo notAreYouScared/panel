@@ -10,8 +10,8 @@ class FileTreeSelect extends SelectTree
 {
     protected string $rootPath = '/';
     
-    // Set to 1 to only load immediate children - no recursive scanning
-    protected int $maxDepth = 1;
+    // Set to 5 to load up to 5 levels of directory hierarchy
+    protected int $maxDepth = 5;
     
     /**
      * Set the root path to start scanning from
@@ -115,7 +115,7 @@ class FileTreeSelect extends SelectTree
     }
     
     /**
-     * Scan directories and build tree structure (non-recursive for performance)
+     * Recursively scan directories and build tree structure
      */
     protected function scanDirectory(DaemonFileRepository $repository, string $path, int $depth): array
     {
@@ -147,13 +147,18 @@ class FileTreeSelect extends SelectTree
             foreach ($directories as $item) {
                 $fullPath = rtrim($path, '/') . '/' . $item['name'];
                 
-                // Build node for this directory - don't recursively scan children
-                // This provides the fastest load time and prevents timeouts
+                // Build node for this directory
                 $node = [
                     'name' => $item['name'],
                     'value' => $fullPath,
-                    'children' => [], // Empty array means directory is selectable but not expanded
+                    'children' => [],
                 ];
+                
+                // Recursively scan subdirectories up to maxDepth
+                $children = $this->scanDirectory($repository, $fullPath, $depth + 1);
+                if (count($children) > 0) {
+                    $node['children'] = $children;
+                }
                 
                 $tree[] = $node;
             }
