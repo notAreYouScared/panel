@@ -8,7 +8,7 @@ use Illuminate\Support\Collection;
 
 class FileTreeSelect extends SelectTree
 {
-    protected string $rootPath = '/home/container';
+    protected string $rootPath = '/';
     
     protected int $maxDepth = 10;
     
@@ -75,8 +75,9 @@ class FileTreeSelect extends SelectTree
             $tree = [];
             
             // Add the root directory itself as a selectable option
+            $rootName = $this->rootPath === '/' ? '/' : (basename($this->rootPath) ?: '/');
             $rootNode = [
-                'name' => basename($this->rootPath) ?: 'container',
+                'name' => $rootName,
                 'value' => $this->rootPath,
                 'children' => [],
             ];
@@ -103,8 +104,9 @@ class FileTreeSelect extends SelectTree
                 'trace' => $e->getTraceAsString()
             ]);
             // Return a minimal tree with just the root as fallback
+            $rootName = $this->rootPath === '/' ? '/' : (basename($this->rootPath) ?: '/');
             return [[
-                'name' => 'container',
+                'name' => $rootName,
                 'value' => $this->rootPath,
                 'children' => [],
             ]];
