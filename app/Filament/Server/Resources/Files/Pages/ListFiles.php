@@ -12,6 +12,7 @@ use App\Filament\Components\Forms\Fields\MonacoEditor;
 use App\Filament\Components\Tables\Columns\BytesColumn;
 use App\Filament\Components\Tables\Columns\DateTimeColumn;
 use App\Filament\Server\Resources\Files\FileResource;
+use App\Forms\Components\FileTreeSelect;
 use App\Livewire\AlertBanner;
 use App\Models\File;
 use App\Models\Server;
@@ -203,22 +204,26 @@ class ListFiles extends ListRecords
                         ->label(trans('server/file.actions.move.title'))
                         ->icon(TablerIcon::Replace)->iconSize(IconSize::Large)
                         ->schema([
-                            TextInput::make('location')
+                            FileTreeSelect::make('location')
                                 ->label(trans('server/file.actions.move.new_location'))
                                 ->hint(trans('server/file.actions.move.new_location_hint'))
                                 ->required()
                                 ->live(),
                             TextEntry::make('new_location')
-                                ->state(fn (Get $get, File $file) => resolve_path(join_paths($this->path, $get('location') ?? '/', $file->name))),
+                                ->state(fn (Get $get, File $file) => resolve_path(join_paths($get('location') ?? $this->path, $file->name))),
                         ])
                         ->action(function ($data, File $file) {
                             $location = $data['location'];
-                            $files = [['to' => join_paths($location, $file->name), 'from' => $file->name]];
+                            
+                            // Calculate relative path from current directory
+                            $relativePath = $this->getRelativePath($location);
+                            
+                            $files = [['to' => join_paths($relativePath, $file->name), 'from' => $file->name]];
 
                             $this->getDaemonFileRepository()->renameFiles($this->path, $files);
 
                             $oldLocation = join_paths($this->path, $file->name);
-                            $newLocation = resolve_path(join_paths($this->path, $location, $file->name));
+                            $newLocation = join_paths($location, $file->name);
 
                             Activity::event('server:file.rename')
                                 ->property('directory', $this->path)
@@ -381,18 +386,21 @@ class ListFiles extends ListRecords
                         ->icon(TablerIcon::Replace)->iconSize(IconSize::Large)
                         ->authorize(fn () => user()?->can(SubuserPermission::FileUpdate, $server))
                         ->schema([
-                            TextInput::make('location')
+                            FileTreeSelect::make('location')
                                 ->label(trans('server/file.actions.move.directory'))
                                 ->hint(trans('server/file.actions.move.directory_hint'))
                                 ->required()
                                 ->live(),
                             TextEntry::make('new_location')
-                                ->state(fn (Get $get) => resolve_path('./' . join_paths($this->path, $get('location') ?? ''))),
+                                ->state(fn (Get $get) => $get('location') ?? $this->path),
                         ])
                         ->action(function (Collection $files, $data) {
                             $location = $data['location'];
+                            
+                            // Calculate relative path from current directory
+                            $relativePath = $this->getRelativePath($location);
 
-                            $files = $files->map(fn ($file) => ['to' => join_paths($location, $file['name']), 'from' => $file['name']])->toArray();
+                            $files = $files->map(fn ($file) => ['to' => join_paths($relativePath, $file['name']), 'from' => $file['name']])->toArray();
                             $this->getDaemonFileRepository()->renameFiles($this->path, $files);
 
                             Activity::event('server:file.rename')
@@ -401,7 +409,7 @@ class ListFiles extends ListRecords
                                 ->log();
 
                             Notification::make()
-                                ->title(trans('server/file.actions.move.bulk_notification', ['count' => count($files), 'directory' => resolve_path(join_paths($this->path, $location))]))
+                                ->title(trans('server/file.actions.move.bulk_notification', ['count' => count($files), 'directory' => $location]))
                                 ->success()
                                 ->send();
 
@@ -727,5 +735,48 @@ class ListFiles extends ListRecords
             ->icon(TablerIcon::Upload)
             ->tooltip(trans('server/file.actions.upload.title'))
             ->extraAttributes(['@click' => 'triggerBrowse']);
+    }
+
+    /**
+     * Calculate relative path from current directory to target directory
+     */
+    protected function getRelativePath(string $targetPath): string
+    {
+        // Remove trailing slashes
+        $from = rtrim($this->path, '/');
+        $to = rtrim($targetPath, '/');
+        
+        // If same directory, return '.'
+        if ($from === $to) {
+            return '.';
+        }
+        
+        // Split paths into parts
+        $fromParts = explode('/', trim($from, '/'));
+        $toParts = explode('/', trim($to, '/'));
+        
+        // Remove common prefix
+        $common = 0;
+        $minLength = min(count($fromParts), count($toParts));
+        for ($i = 0; $i < $minLength; $i++) {
+            if ($fromParts[$i] === $toParts[$i]) {
+                $common++;
+            } else {
+                break;
+            }
+        }
+        
+        // Build relative path
+        $upLevels = count($fromParts) - $common;
+        $downPath = array_slice($toParts, $common);
+        
+        $relativeParts = array_merge(
+            array_fill(0, $upLevels, '..'),
+            $downPath
+        );
+        
+        // Return the relative path, or '.' if the result is empty
+        $result = implode('/', $relativeParts);
+        return $result !== '' ? $result : '.';
     }
 }
