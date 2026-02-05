@@ -92,9 +92,15 @@ class FileTreeSelect extends SelectTree
             $items = $repository->getDirectory($path);
             $tree = [];
             
+            // Check if the response contains an error
+            if (isset($items['error'])) {
+                return [];
+            }
+            
             // Filter and sort to show directories only
+            // API returns 'file' and 'directory' keys, not 'is_file' and 'is_directory'
             $directories = collect($items)
-                ->filter(fn($item) => $item['is_file'] === false)
+                ->filter(fn($item) => is_array($item) && isset($item['directory']) && $item['directory'] === true)
                 ->sortBy('name')
                 ->values();
             
