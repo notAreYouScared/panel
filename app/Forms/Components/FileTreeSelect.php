@@ -65,16 +65,49 @@ class FileTreeSelect extends SelectTree
         try {
             $server = Filament::getTenant();
             if ($server === null) {
+                \Log::warning('FileTreeSelect: No server tenant found');
                 return [];
             }
             
             $repository = app(DaemonFileRepository::class)->setServer($server);
             
-            // Start building from root
-            return $this->scanDirectory($repository, $this->rootPath, 0);
+            // Build the tree starting from root, adding root as a selectable node
+            $tree = [];
+            
+            // Add the root directory itself as a selectable option
+            $rootNode = [
+                'name' => basename($this->rootPath) ?: 'container',
+                'value' => $this->rootPath,
+                'children' => [],
+            ];
+            
+            // Scan subdirectories
+            try {
+                $children = $this->scanDirectory($repository, $this->rootPath, 0);
+                if (count($children) > 0) {
+                    $rootNode['children'] = $children;
+                }
+            } catch (\Exception $e) {
+                \Log::error('FileTreeSelect: Error scanning root directory', [
+                    'path' => $this->rootPath,
+                    'error' => $e->getMessage()
+                ]);
+            }
+            
+            $tree[] = $rootNode;
+            
+            return $tree;
         } catch (\Exception $e) {
-            // If we can't scan, return empty array
-            return [];
+            \Log::error('FileTreeSelect: Error building file tree', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            // Return a minimal tree with just the root as fallback
+            return [[
+                'name' => 'container',
+                'value' => $this->rootPath,
+                'children' => [],
+            ]];
         }
     }
     
@@ -94,6 +127,10 @@ class FileTreeSelect extends SelectTree
             
             // Check if the response contains an error
             if (isset($items['error'])) {
+                \Log::warning('FileTreeSelect: API returned error for path', [
+                    'path' => $path,
+                    'error' => $items['error']
+                ]);
                 return [];
             }
             
@@ -125,6 +162,11 @@ class FileTreeSelect extends SelectTree
             
             return $tree;
         } catch (\Exception $e) {
+            \Log::warning('FileTreeSelect: Error scanning directory', [
+                'path' => $path,
+                'depth' => $depth,
+                'error' => $e->getMessage()
+            ]);
             // If we can't scan this directory, return empty
             return [];
         }
