@@ -1,6 +1,8 @@
 import Treeselect from 'treeselectjs'
 
-export default function selectTree({
+// Register the selectTree component with Alpine.js
+document.addEventListener('alpine:init', () => {
+    window.selectTree = function selectTree({
     state,
     name,
     options,
@@ -78,4 +80,4 @@ export default function selectTree({
             });
         }
     }
-}
+});

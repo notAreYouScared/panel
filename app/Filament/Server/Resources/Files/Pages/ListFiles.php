@@ -216,11 +216,7 @@ class ListFiles extends ListRecords
                             $location = $data['location'];
                             
                             // Calculate relative path from current directory
-                            $relativePath = str_replace($this->path, '', $location);
-                            $relativePath = ltrim($relativePath, '/');
-                            if (empty($relativePath)) {
-                                $relativePath = '.';
-                            }
+                            $relativePath = $this->getRelativePath($location);
                             
                             $files = [['to' => join_paths($relativePath, $file->name), 'from' => $file->name]];
 
@@ -402,11 +398,7 @@ class ListFiles extends ListRecords
                             $location = $data['location'];
                             
                             // Calculate relative path from current directory
-                            $relativePath = str_replace($this->path, '', $location);
-                            $relativePath = ltrim($relativePath, '/');
-                            if (empty($relativePath)) {
-                                $relativePath = '.';
-                            }
+                            $relativePath = $this->getRelativePath($location);
 
                             $files = $files->map(fn ($file) => ['to' => join_paths($relativePath, $file['name']), 'from' => $file['name']])->toArray();
                             $this->getDaemonFileRepository()->renameFiles($this->path, $files);
@@ -743,5 +735,46 @@ class ListFiles extends ListRecords
             ->icon(TablerIcon::Upload)
             ->tooltip(trans('server/file.actions.upload.title'))
             ->extraAttributes(['@click' => 'triggerBrowse']);
+    }
+
+    /**
+     * Calculate relative path from current directory to target directory
+     */
+    protected function getRelativePath(string $targetPath): string
+    {
+        // Remove trailing slashes
+        $from = rtrim($this->path, '/');
+        $to = rtrim($targetPath, '/');
+        
+        // If same directory, return '.'
+        if ($from === $to) {
+            return '.';
+        }
+        
+        // Split paths into parts
+        $fromParts = explode('/', trim($from, '/'));
+        $toParts = explode('/', trim($to, '/'));
+        
+        // Remove common prefix
+        $common = 0;
+        $minLength = min(count($fromParts), count($toParts));
+        for ($i = 0; $i < $minLength; $i++) {
+            if ($fromParts[$i] === $toParts[$i]) {
+                $common++;
+            } else {
+                break;
+            }
+        }
+        
+        // Build relative path
+        $upLevels = count($fromParts) - $common;
+        $downPath = array_slice($toParts, $common);
+        
+        $relativeParts = array_merge(
+            array_fill(0, $upLevels, '..'),
+            $downPath
+        );
+        
+        return implode('/', $relativeParts) ?: '.';
     }
 }

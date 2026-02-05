@@ -8,7 +8,7 @@
 @endphp
 
 <x-dynamic-component :component="$getFieldWrapperView()" :field="$field">
-    @vite(['resources/css/select-tree.css', 'resources/js/select-tree-dist.js'])
+    @vite(['resources/css/select-tree.css', 'resources/js/select-tree.js'])
     <div
         wire:key="{{ $getTreeKey() }}"
         wire:ignore
