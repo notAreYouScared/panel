@@ -234,6 +234,70 @@ class EditProfile extends BaseEditProfile
                     ->map(fn (MultiFactorAuthenticationProvider $multiFactorAuthenticationProvider) => Group::make($multiFactorAuthenticationProvider->getManagementSchemaComponents())
                         ->statePath($multiFactorAuthenticationProvider->getId()))
                     ->all()),
+            Tab::make('passkeys')
+                ->label(trans('profile.tabs.passkeys'))
+                ->icon(TablerIcon::Fingerprint)
+                ->schema([
+                    Grid::make(5)
+                        ->schema([
+                            Section::make(trans('profile.register_passkey'))->columnSpan(3)
+                                ->description(trans('profile.passkeys_description'))
+                                ->schema([
+                                    TextInput::make('passkey_name')
+                                        ->label(trans('profile.name'))
+                                        ->placeholder(trans('profile.passkey_name_placeholder'))
+                                        ->helperText(trans('profile.passkey_name_help'))
+                                        ->live(),
+                                    Actions::make([
+                                        Action::make('register_passkey')
+                                            ->label(trans('profile.register_passkey_button'))
+                                            ->icon(TablerIcon::Plus)
+                                            ->color('primary')
+                                            ->requiresConfirmation()
+                                            ->modalHeading(trans('profile.register_passkey_modal_heading'))
+                                            ->modalDescription(trans('profile.register_passkey_modal_description'))
+                                            ->modalSubmitActionLabel(trans('profile.register'))
+                                            ->action(function (Get $get) {
+                                                // Note: The actual WebAuthn registration is handled by the
+                                                // spatie/laravel-passkeys package via JavaScript and the
+                                                // routes defined in routes/auth.php. This action triggers
+                                                // the frontend flow which then calls the registration endpoints.
+                                                // See: https://spatie.be/docs/laravel-passkeys
+
+                                                $passkeyName = $get('passkey_name') ?: trans('profile.default_passkey_name');
+
+                                                Notification::make()
+                                                    ->title(trans('profile.passkey_registration_started'))
+                                                    ->info()
+                                                    ->send();
+
+                                                // The Livewire component will dispatch browser WebAuthn API
+                                                $this->dispatch('passkey-register', name: $passkeyName);
+                                            }),
+                                    ]),
+                                ]),
+                            Section::make(trans('profile.existing_passkeys'))->columnSpan(2)
+                                ->description(trans('profile.manage_passkeys_description'))
+                                ->schema([
+                                    Repeater::make('passkeys')
+                                        ->relationship('passkeys')
+                                        ->label('')
+                                        ->addable(false)
+                                        ->reorderable(false)
+                                        ->schema([
+                                            TextEntry::make('name')
+                                                ->label(trans('profile.name')),
+                                            TextEntry::make('created_at')
+                                                ->label(trans('profile.created'))
+                                                ->dateTime(),
+                                            TextEntry::make('last_used_at')
+                                                ->label(trans('profile.last_used'))
+                                                ->dateTime()
+                                                ->placeholder(trans('profile.never_used')),
+                                        ]),
+                                ]),
+                        ]),
+                ]),
             Tab::make('api_keys')
                 ->label(trans('profile.tabs.api_keys'))
                 ->icon(TablerIcon::Key)

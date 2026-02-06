@@ -259,6 +259,17 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
     }
 
     /**
+     * Returns all passkeys (WebAuthn credentials) registered by the user.
+     * Passkeys enable passwordless authentication using biometrics, PINs, or security keys.
+     *
+     * @return HasMany<Passkey, $this>
+     */
+    public function passkeys(): HasMany
+    {
+        return $this->hasMany(Passkey::class);
+    }
+
+    /**
      * Returns all the activity logs where this user is the subject — not to
      * be confused by activity logs where this user is the _actor_.
      */
