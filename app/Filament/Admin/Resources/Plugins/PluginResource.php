@@ -293,11 +293,34 @@ class PluginResource extends Resource
                         TextInput::make('url')
                             ->required()
                             ->url()
-                            ->endsWith('.zip'),
+                            ->helperText('Accepts direct .zip URLs or GitHub folder URLs (e.g., https://github.com/owner/repo/tree/branch/folder)')
+                            ->rules([
+                                function () {
+                                    return function (string $attribute, $value, $fail) {
+                                        // Accept .zip URLs
+                                        if (str_ends_with($value, '.zip')) {
+                                            return;
+                                        }
+                                        // Accept GitHub tree URLs
+                                        if (preg_match('#^https?://github\.com/([^/]+)/([^/]+)/tree/([^/]+)/(.+)$#', $value)) {
+                                            return;
+                                        }
+                                        $fail('The URL must be a direct .zip URL or a GitHub folder URL (https://github.com/owner/repo/tree/branch/folder)');
+                                    };
+                                },
+                            ]),
                     ])
                     ->action(function ($data, $livewire, PluginService $pluginService) {
                         try {
-                            $pluginName = str($data['url'])->before('.zip')->explode('/')->last();
+                            // Extract plugin name from URL
+                            $url = $data['url'];
+                            if (preg_match('#^https?://github\.com/([^/]+)/([^/]+)/tree/([^/]+)/(.+)$#', $url, $matches)) {
+                                // GitHub folder URL - use last part of path
+                                $pluginName = basename($matches[4]);
+                            } else {
+                                // Direct .zip URL - use filename
+                                $pluginName = str($url)->before('.zip')->explode('/')->last();
+                            }
 
                             if (Plugin::where('id', $pluginName)->exists()) {
                                 throw new Exception(trans('admin/plugin.notifications.import_exists'));

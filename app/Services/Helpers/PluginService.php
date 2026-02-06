@@ -393,6 +393,12 @@ class PluginService
     /** @throws Exception */
     public function downloadPluginFromUrl(string $url, bool $cleanDownload = false): void
     {
+        // Check if this is a GitHub tree URL (folder URL)
+        if ($this->isGitHubTreeUrl($url)) {
+            $this->downloadPluginFromGitHub($url, $cleanDownload);
+            return;
+        }
+
         $info = pathinfo($url);
         $tmpDir = TemporaryDirectory::make()->deleteWhenDestroyed();
         $tmpPath = $tmpDir->path($info['basename']);
@@ -410,6 +416,123 @@ class PluginService
         }
 
         $this->downloadPluginFromFile(new UploadedFile($tmpPath, $info['basename'], 'application/zip'), $cleanDownload);
+    }
+
+    private function isGitHubTreeUrl(string $url): bool
+    {
+        return (bool) preg_match('#^https?://github\.com/([^/]+)/([^/]+)/tree/([^/]+)/(.+)$#', $url);
+    }
+
+    private function downloadPluginFromGitHub(string $url, bool $cleanDownload = false): void
+    {
+        // Parse GitHub URL
+        if (!preg_match('#^https?://github\.com/([^/]+)/([^/]+)/tree/([^/]+)/(.+)$#', $url, $matches)) {
+            throw new InvalidFileUploadException('Invalid GitHub URL format.');
+        }
+
+        $owner = $matches[1];
+        $repo = $matches[2];
+        $branch = $matches[3];
+        $path = $matches[4];
+
+        // Get the plugin name from the last part of the path
+        $pluginName = basename($path);
+
+        $tmpDir = TemporaryDirectory::make()->deleteWhenDestroyed();
+        $pluginDir = $tmpDir->path($pluginName);
+
+        // Create plugin directory if it doesn't exist
+        if (!File::exists($pluginDir) && !File::makeDirectory($pluginDir, 0755, true)) {
+            throw new InvalidFileUploadException('Could not create temporary directory.');
+        }
+
+        // Track total downloaded size
+        $totalSize = 0;
+        $maxSize = config('panel.plugin.max_import_size');
+
+        // Download folder contents recursively
+        $this->downloadGitHubFolder($owner, $repo, $branch, $path, $pluginDir, $totalSize, $maxSize);
+
+        // Create a zip file
+        $zipPath = $tmpDir->path($pluginName . '.zip');
+        $zip = new ZipArchive();
+
+        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            throw new InvalidFileUploadException('Could not create zip file.');
+        }
+
+        // Add all files to the zip
+        $files = File::allFiles($pluginDir);
+        foreach ($files as $file) {
+            $relativePath = $pluginName . '/' . $file->getRelativePathname();
+            $zip->addFile($file->getRealPath(), $relativePath);
+        }
+
+        $zip->close();
+
+        // Install the plugin using the existing method
+        $this->downloadPluginFromFile(new UploadedFile($zipPath, $pluginName . '.zip', 'application/zip'), $cleanDownload);
+    }
+
+    private function downloadGitHubFolder(string $owner, string $repo, string $branch, string $path, string $localPath, int &$totalSize, int $maxSize): void
+    {
+        // GitHub API endpoint to get folder contents
+        $apiUrl = "https://api.github.com/repos/{$owner}/{$repo}/contents/{$path}?ref={$branch}";
+
+        $response = Http::timeout(30)->connectTimeout(5)
+            ->withHeaders(['Accept' => 'application/vnd.github.v3+json'])
+            ->throw()
+            ->get($apiUrl);
+
+        $contents = $response->json();
+
+        if (!is_array($contents)) {
+            throw new InvalidFileUploadException('Invalid response from GitHub API.');
+        }
+
+        foreach ($contents as $item) {
+            // Validate item name to prevent path traversal attacks
+            if (!isset($item['name']) || Str::contains($item['name'], '..') || Str::startsWith($item['name'], '/')) {
+                throw new InvalidFileUploadException('GitHub response contains invalid path traversal sequences.');
+            }
+
+            $itemPath = $localPath . '/' . $item['name'];
+
+            if ($item['type'] === 'file') {
+                // Validate download URL to ensure it's from GitHub
+                if (!isset($item['download_url']) || !Str::startsWith($item['download_url'], 'https://raw.githubusercontent.com/')) {
+                    throw new InvalidFileUploadException('Invalid file download URL from GitHub API.');
+                }
+
+                // Download file content
+                $fileContent = Http::timeout(30)->connectTimeout(5)->throw()->get($item['download_url'])->body();
+
+                // Track cumulative size across all files
+                $fileSize = strlen($fileContent);
+                $totalSize += $fileSize;
+                
+                if ($totalSize > $maxSize) {
+                    $maxSizeMiB = round($maxSize / (1024 * 1024), 2);
+                    throw new InvalidFileUploadException("Total download size exceeds maximum allowed size of {$maxSizeMiB} MiB");
+                }
+
+                if (!file_put_contents($itemPath, $fileContent)) {
+                    throw new InvalidFileUploadException("Could not write file: {$item['name']}");
+                }
+            } elseif ($item['type'] === 'dir') {
+                // Validate that path is properly set for directories
+                if (!isset($item['path'])) {
+                    throw new InvalidFileUploadException('Invalid directory path in GitHub API response.');
+                }
+
+                // Create directory if it doesn't exist and recurse
+                if (!File::exists($itemPath) && !File::makeDirectory($itemPath, 0755, true)) {
+                    throw new InvalidFileUploadException("Could not create directory: {$item['name']}");
+                }
+
+                $this->downloadGitHubFolder($owner, $repo, $branch, $item['path'], $itemPath, $totalSize, $maxSize);
+            }
+        }
     }
 
     public function deletePlugin(Plugin $plugin): void
