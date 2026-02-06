@@ -74,4 +74,10 @@ return [
         'dev_mode' => env('PANEL_PLUGIN_DEV_MODE', false),
         'max_import_size' => env('PANEL_PLUGIN_MAX_IMPORT_SIZE', 1024 * 1024 * 100),
     ],
+
+    'queue' => [
+        'monitor' => [
+            'retention_days' => env('QUEUE_MONITOR_RETENTION_DAYS', 7),
+        ],
+    ],
 ];

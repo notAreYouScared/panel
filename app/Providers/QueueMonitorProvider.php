@@ -1,0 +1,109 @@
+<?php
+
+namespace App\Providers;
+
+use App\Models\QueueMonitor;
+use Illuminate\Contracts\Queue\Job as JobContract;
+use Illuminate\Queue\Events\JobExceptionOccurred;
+use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Queue\Events\JobProcessed;
+use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\ServiceProvider;
+
+class QueueMonitorProvider extends ServiceProvider
+{
+    /**
+     * Maximum length for exception messages (TEXT field limit).
+     */
+    private const EXCEPTION_MESSAGE_MAX_LENGTH = 65535;
+
+    /**
+     * Bootstrap services.
+     */
+    public function boot(): void
+    {
+        Queue::before(static function (JobProcessing $event) {
+            self::jobStarted($event->job);
+        });
+
+        Queue::after(static function (JobProcessed $event) {
+            self::jobFinished($event->job);
+        });
+
+        Queue::failing(static function (JobFailed $event) {
+            self::jobFinished($event->job, true, $event->exception);
+        });
+
+        Queue::exceptionOccurred(static function (JobExceptionOccurred $event) {
+            self::jobFinished($event->job, true, $event->exception);
+        });
+    }
+
+    /**
+     * Get Job ID.
+     */
+    public static function getJobId(JobContract $job): string|int
+    {
+        return QueueMonitor::getJobId($job);
+    }
+
+    /**
+     * Start Queue Monitoring for Job.
+     */
+    protected static function jobStarted(JobContract $job): void
+    {
+        $now = now();
+        $jobId = self::getJobId($job);
+
+        $monitor = QueueMonitor::query()->create([
+            'job_id' => $jobId,
+            'name' => $job->resolveName(),
+            'queue' => $job->getQueue(),
+            'started_at' => $now,
+            'attempt' => $job->attempts(),
+            'progress' => 0,
+        ]);
+
+        // Mark any previous running instances as failed
+        QueueMonitor::query()
+            ->where('id', '!=', $monitor->id)
+            ->where('job_id', $jobId)
+            ->where('failed', false)
+            ->whereNull('finished_at')
+            ->update([
+                'finished_at' => now(),
+                'failed' => true,
+            ]);
+    }
+
+    /**
+     * Finish Queue Monitoring for Job.
+     */
+    protected static function jobFinished(JobContract $job, bool $failed = false, ?\Throwable $exception = null): void
+    {
+        $monitor = QueueMonitor::query()
+            ->where('job_id', self::getJobId($job))
+            ->where('attempt', $job->attempts())
+            ->orderByDesc('started_at')
+            ->first();
+
+        if ($monitor === null) {
+            return;
+        }
+
+        $attributes = [
+            'progress' => 100,
+            'finished_at' => now(),
+            'failed' => $failed,
+        ];
+
+        if ($exception !== null) {
+            $attributes += [
+                'exception_message' => mb_strcut($exception->getMessage(), 0, self::EXCEPTION_MESSAGE_MAX_LENGTH),
+            ];
+        }
+
+        $monitor->update($attributes);
+    }
+}
