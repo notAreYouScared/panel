@@ -42,7 +42,11 @@ class ListActivityLogs extends ListRecords
 
                         return trans('admin/log.table.system');
                     })
-                    ->searchable(query: fn (Builder $query, string $search) => $query->whereHas('actor', fn (Builder $q) => $q->where('username', 'like', "%{$search}%"))),
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        $escapedSearch = addcslashes($search, '%_\\');
+
+                        return $query->whereHas('actor', fn (Builder $q) => $q->where('username', 'like', "%{$escapedSearch}%"));
+                    }),
                 TextColumn::make('event')
                     ->label(trans('admin/log.table.event'))
                     ->badge()
