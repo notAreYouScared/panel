@@ -77,7 +77,7 @@ class Settings extends Page implements HasSchemas
     /** @var array<mixed>|null */
     public ?array $data = [];
 
-    /** @var array<mixed> */
+    /** @var array<mixed> Snapshot of normalized form state captured on mount, used to detect which settings changed before saving. */
     #[Locked]
     public array $initialSettings = [];
 
@@ -950,6 +950,10 @@ class Settings extends Page implements HasSchemas
         return $changed;
     }
 
+    /**
+     * Converts a setting value to a normalized string for diffing.
+     * Handles enums, booleans, arrays (JSON-encoded), and scalar values.
+     */
     private function normalizeSettingValue(mixed $value): string
     {
         if ($value instanceof BackedEnum) {
