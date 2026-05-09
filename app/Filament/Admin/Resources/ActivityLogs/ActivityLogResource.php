@@ -63,6 +63,10 @@ class ActivityLogResource extends Resource
             return false;
         }
 
+        if ($user->isRootAdmin()) {
+            return true;
+        }
+
         return $user->can('view adminAuditLog') || $user->can('view panelLog');
     }
 
