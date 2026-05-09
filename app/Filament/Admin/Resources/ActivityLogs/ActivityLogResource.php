@@ -6,12 +6,15 @@ use App\Enums\CustomizationKey;
 use App\Enums\TablerIcon;
 use App\Filament\Admin\Resources\ActivityLogs\Pages\ListActivityLogs;
 use App\Models\ActivityLog;
+use App\Traits\Filament\CanCustomizePages;
 use BackedEnum;
 use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
 
 class ActivityLogResource extends Resource
 {
+    use CanCustomizePages;
+
     protected static ?string $model = ActivityLog::class;
 
     protected static string|BackedEnum|null $navigationIcon = TablerIcon::ShieldSearch;
