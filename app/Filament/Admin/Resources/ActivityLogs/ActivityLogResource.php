@@ -33,7 +33,7 @@ class ActivityLogResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return user()?->getCustomization(CustomizationKey::TopNavigation) ? false : trans('admin/dashboard.advanced');
+        return user()?->getCustomization(CustomizationKey::TopNavigation) ? null : trans('admin/dashboard.advanced');
     }
 
     public static function canCreate(): bool
@@ -68,11 +68,6 @@ class ActivityLogResource extends Resource
         }
 
         return $user->can('view adminAuditLog') || $user->can('view panelLog');
-    }
-
-    public static function shouldRegisterNavigation(): bool
-    {
-        return static::canViewAny();
     }
 
     /** @return array<string, PageRegistration> */
