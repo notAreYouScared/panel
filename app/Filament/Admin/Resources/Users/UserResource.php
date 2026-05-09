@@ -489,6 +489,26 @@ class UserResource extends Resource
                                 ->state(fn (ActivityLog $log) => new HtmlString($log->htmlable())),
                         ]),
                 ]),
+            Tab::make('admin_log')
+                ->visible(fn (?User $user) => $user && user()?->can('view adminAuditLog'))
+                ->disabledOn('create')
+                ->label(trans('admin/user.tabs.admin_log'))
+                ->icon(TablerIcon::ShieldSearch)
+                ->schema([
+                    Repeater::make('adminLog')
+                        ->hiddenLabel()
+                        ->inlineLabel(false)
+                        ->deletable(false)
+                        ->addable(false)
+                        ->relationship(null, function (Builder $query) {
+                            $query->orderBy('timestamp', 'desc');
+                        })
+                        ->schema([
+                            TextEntry::make('log')
+                                ->hiddenLabel()
+                                ->state(fn (ActivityLog $log) => new HtmlString($log->htmlable())),
+                        ]),
+                ]),
         ];
     }
 

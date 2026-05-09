@@ -21,4 +21,7 @@ return [
     'password_reset' => 'Reset Password',
     'password_reset_sent' => 'Password Reset E-Mail Sent',
     'password_reset_failed' => 'Failed to Send Password Reset E-Mail',
+    'tabs' => [
+        'admin_log' => 'Admin Log',
+    ],
 ];

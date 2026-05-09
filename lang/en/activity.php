@@ -125,4 +125,26 @@ return [
         ],
         'crashed' => 'Server crashed',
     ],
+    'admin' => [
+        'user' => [
+            'create' => 'Created user <b>:name</b>',
+            'update' => 'Updated user <b>:name</b>',
+            'delete' => 'Deleted user <b>:name</b>',
+        ],
+        'server' => [
+            'create' => 'Created server <b>:name</b>',
+            'update' => 'Updated server <b>:name</b>',
+            'delete' => 'Deleted server <b>:name</b>',
+        ],
+        'node' => [
+            'create' => 'Created node <b>:name</b>',
+            'update' => 'Updated node <b>:name</b>',
+            'delete' => 'Deleted node <b>:name</b>',
+        ],
+        'egg' => [
+            'create' => 'Created egg <b>:name</b>',
+            'update' => 'Updated egg <b>:name</b>',
+            'delete' => 'Deleted egg <b>:name</b>',
+        ],
+    ],
 ];
