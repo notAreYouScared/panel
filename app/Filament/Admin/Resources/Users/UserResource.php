@@ -490,7 +490,15 @@ class UserResource extends Resource
                         ]),
                 ]),
             Tab::make('admin_log')
-                ->visible(fn (?User $user) => $user && user()?->can('view adminAuditLog'))
+                ->visible(function (?User $user): bool {
+                    if (!$user) {
+                        return false;
+                    }
+
+                    $viewer = user();
+
+                    return $viewer?->isRootAdmin() || $viewer?->can('view adminAuditLog');
+                })
                 ->disabledOn('create')
                 ->label(trans('admin/user.tabs.admin_log'))
                 ->icon(TablerIcon::ShieldSearch)
