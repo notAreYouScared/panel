@@ -43,7 +43,7 @@ class ListActivityLogs extends ListRecords
                         return trans('admin/log.table.system');
                     })
                     ->searchable(query: function (Builder $query, string $search): Builder {
-                        $escapedSearch = addcslashes($search, '%_\\');
+                        $escapedSearch = addcslashes($search, '%_\\\\');
 
                         return $query->whereHas('actor', fn (Builder $q) => $q->where('username', 'like', "%{$escapedSearch}%"));
                     }),

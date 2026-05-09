@@ -961,7 +961,9 @@ class Settings extends Page implements HasSchemas
         }
 
         if (is_array($value)) {
-            return json_encode($value) ?: '';
+            $json = json_encode($value);
+
+            return $json === false ? '' : $json;
         }
 
         return (string) ($value ?? '');
