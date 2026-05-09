@@ -2,7 +2,6 @@
 
 namespace App\Filament\Admin\Resources\ActivityLogs;
 
-use App\Enums\CustomizationKey;
 use App\Enums\TablerIcon;
 use App\Filament\Admin\Resources\ActivityLogs\Pages\ListActivityLogs;
 use App\Models\ActivityLog;
@@ -18,6 +17,8 @@ class ActivityLogResource extends Resource
     protected static ?string $model = ActivityLog::class;
 
     protected static string|BackedEnum|null $navigationIcon = TablerIcon::ShieldSearch;
+
+    protected static ?int $navigationSort = 10;
 
     public static function getNavigationLabel(): string
     {
@@ -36,7 +37,7 @@ class ActivityLogResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return user()?->getCustomization(CustomizationKey::TopNavigation) ? null : trans('admin/dashboard.advanced');
+        return trans('admin/dashboard.advanced');
     }
 
     public static function canCreate(): bool

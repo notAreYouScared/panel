@@ -6,6 +6,7 @@ use App\Enums\TablerIcon;
 use App\Filament\Admin\Resources\ActivityLogs\ActivityLogResource;
 use App\Filament\Components\Tables\Columns\DateTimeColumn;
 use App\Models\ActivityLog;
+use App\Models\Server;
 use App\Models\User;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Columns\TextColumn;
@@ -43,7 +44,6 @@ class ListActivityLogs extends ListRecords
                         return trans('admin/log.table.system');
                     })
                     ->searchable(query: function (Builder $query, string $search): Builder {
-                        // Escape SQL LIKE special chars (%, _, \) so the search term is treated literally.
                         $escapedSearch = addcslashes($search, '%_\\\\');
 
                         return $query->whereHas('actor', fn (Builder $q) => $q->where('username', 'like', "%{$escapedSearch}%"));

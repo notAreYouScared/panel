@@ -13,7 +13,7 @@ return [
     'debug' => 'Debug',
     'navigation' => [
         'panel_logs' => 'Panel Logs',
-        'admin_audit_log' => 'Admin Audit Log',
+        'admin_audit_log' => 'Admin Audit',
     ],
     'table' => [
         'actor' => 'Actor',
