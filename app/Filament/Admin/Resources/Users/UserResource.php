@@ -500,7 +500,7 @@ class UserResource extends Resource
                         ->inlineLabel(false)
                         ->deletable(false)
                         ->addable(false)
-                        ->relationship(null, function (Builder $query) {
+                        ->relationship('adminLog', function (Builder $query) {
                             $query->orderBy('timestamp', 'desc');
                         })
                         ->schema([
