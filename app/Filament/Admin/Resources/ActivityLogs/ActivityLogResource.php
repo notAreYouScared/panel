@@ -58,7 +58,12 @@ class ActivityLogResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return user()?->can('view adminAuditLog') ?? false;
+        $user = user();
+        if (!$user) {
+            return false;
+        }
+
+        return $user->can('view adminAuditLog') || $user->can('view panelLog');
     }
 
     public static function shouldRegisterNavigation(): bool

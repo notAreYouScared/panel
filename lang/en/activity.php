@@ -126,6 +126,9 @@ return [
         'crashed' => 'Server crashed',
     ],
     'admin' => [
+        'settings' => [
+            'update' => 'Updated panel settings (<b>:count</b>): <b>:settings</b>',
+        ],
         'user' => [
             'create' => 'Created user <b>:name</b>',
             'update' => 'Updated user <b>:name</b>',
