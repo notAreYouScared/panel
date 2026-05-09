@@ -895,6 +895,7 @@ class Settings extends Page implements HasSchemas
 
             if (!empty($changedSettings)) {
                 Activity::event('admin:settings.update')
+                    ->actor(user())
                     ->property('count', count($changedSettings))
                     ->property('settings', implode(', ', $changedSettings))
                     ->log();
