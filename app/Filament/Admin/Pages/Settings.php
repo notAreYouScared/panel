@@ -47,6 +47,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Notification as MailNotification;
 use Illuminate\Support\Str;
+use Livewire\Attributes\Locked;
 
 /**
  * @property Schema $form
@@ -77,7 +78,8 @@ class Settings extends Page implements HasSchemas
     public ?array $data = [];
 
     /** @var array<mixed> */
-    private array $initialSettings = [];
+    #[Locked]
+    public array $initialSettings = [];
 
     public function mount(): void
     {
