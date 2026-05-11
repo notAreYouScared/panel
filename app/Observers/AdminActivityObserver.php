@@ -74,7 +74,18 @@ class AdminActivityObserver
 
     public function userUpdated(User $user): void
     {
-        $this->log('admin:user.update', $user, ['name' => $user->username]);
+        $changedFields = collect(array_keys($user->getChanges()))
+            ->reject(fn (string $field) => $field === 'updated_at')
+            ->values()
+            ->all();
+
+        sort($changedFields);
+
+        $this->log('admin:user.update', $user, [
+            'name' => empty($changedFields) ? $user->username : sprintf('%s (%s)', $user->username, implode(', ', $changedFields)),
+            'count' => count($changedFields),
+            'changes' => implode(', ', $changedFields),
+        ]);
     }
 
     public function userDeleted(User $user): void
