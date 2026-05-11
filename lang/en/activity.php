@@ -149,5 +149,10 @@ return [
             'update' => 'Updated egg <b>:name</b>',
             'delete' => 'Deleted egg <b>:name</b>',
         ],
+        'role' => [
+            'create' => 'Created role <b>:name</b>',
+            'update' => 'Updated role <b>:name</b>',
+            'delete' => 'Deleted role <b>:name</b>',
+        ],
     ],
 ];

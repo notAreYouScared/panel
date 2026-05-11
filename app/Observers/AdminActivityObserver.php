@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Facades\Activity;
 use App\Models\Egg;
 use App\Models\Node;
+use App\Models\Role;
 use App\Models\Server;
 use App\Models\User;
 use Filament\Facades\Filament;
@@ -74,12 +75,7 @@ class AdminActivityObserver
 
     public function userUpdated(User $user): void
     {
-        $changedFields = collect(array_keys($user->getChanges()))
-            ->reject(fn (string $field) => $field === 'updated_at')
-            ->values()
-            ->all();
-
-        sort($changedFields);
+        $changedFields = $this->changedFieldsFor($user);
 
         $this->log('admin:user.update', $user, [
             'name' => empty($changedFields) ? $user->username : sprintf('%s (%s)', $user->username, implode(', ', $changedFields)),
@@ -104,7 +100,13 @@ class AdminActivityObserver
 
     public function serverUpdated(Server $server): void
     {
-        $this->log('admin:server.update', $server, ['name' => $server->name]);
+        $changedFields = $this->changedFieldsFor($server);
+
+        $this->log('admin:server.update', $server, [
+            'name' => empty($changedFields) ? $server->name : sprintf('%s (%s)', $server->name, implode(', ', $changedFields)),
+            'count' => count($changedFields),
+            'changes' => implode(', ', $changedFields),
+        ]);
     }
 
     public function serverDeleted(Server $server): void
@@ -123,7 +125,13 @@ class AdminActivityObserver
 
     public function nodeUpdated(Node $node): void
     {
-        $this->log('admin:node.update', $node, ['name' => $node->name]);
+        $changedFields = $this->changedFieldsFor($node);
+
+        $this->log('admin:node.update', $node, [
+            'name' => empty($changedFields) ? $node->name : sprintf('%s (%s)', $node->name, implode(', ', $changedFields)),
+            'count' => count($changedFields),
+            'changes' => implode(', ', $changedFields),
+        ]);
     }
 
     public function nodeDeleted(Node $node): void
@@ -142,11 +150,64 @@ class AdminActivityObserver
 
     public function eggUpdated(Egg $egg): void
     {
-        $this->log('admin:egg.update', $egg, ['name' => $egg->name]);
+        $changedFields = $this->changedFieldsFor($egg);
+
+        $this->log('admin:egg.update', $egg, [
+            'name' => empty($changedFields) ? $egg->name : sprintf('%s (%s)', $egg->name, implode(', ', $changedFields)),
+            'count' => count($changedFields),
+            'changes' => implode(', ', $changedFields),
+        ]);
     }
 
     public function eggDeleted(Egg $egg): void
     {
         $this->log('admin:egg.delete', $egg, ['name' => $egg->name]);
+    }
+
+    // -------------------------------------------------------------------------
+    // Role events
+    // -------------------------------------------------------------------------
+
+    public function roleCreated(Role $role): void
+    {
+        $this->log('admin:role.create', $role, ['name' => $role->name]);
+    }
+
+    public function roleUpdated(Role $role): void
+    {
+        $changedFields = $this->changedFieldsFor($role);
+
+        $this->log('admin:role.update', $role, [
+            'name' => empty($changedFields) ? $role->name : sprintf('%s (%s)', $role->name, implode(', ', $changedFields)),
+            'count' => count($changedFields),
+            'changes' => implode(', ', $changedFields),
+        ]);
+    }
+
+    public function roleDeleted(Role $role): void
+    {
+        $this->log('admin:role.delete', $role, ['name' => $role->name]);
+    }
+
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Returns the sorted list of attribute names that changed on the given model,
+     * excluding internal timestamps.
+     *
+     * @return string[]
+     */
+    private function changedFieldsFor(Model $model): array
+    {
+        $fields = collect(array_keys($model->getChanges()))
+            ->reject(fn (string $field) => $field === 'updated_at')
+            ->values()
+            ->all();
+
+        sort($fields);
+
+        return $fields;
     }
 }
