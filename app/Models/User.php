@@ -136,6 +136,11 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
      */
     public const RESOURCE_NAME = 'user';
 
+    public function getAdminActivityName(): string
+    {
+        return $this->username;
+    }
+
     /**
      * A list of mass-assignable variables.
      */

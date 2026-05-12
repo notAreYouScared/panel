@@ -3,11 +3,7 @@
 namespace App\Observers;
 
 use App\Facades\Activity;
-use App\Models\Egg;
-use App\Models\Node;
-use App\Models\Role;
-use App\Models\Server;
-use App\Models\User;
+use App\Traits\HasAdminActivityLogging;
 use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -114,14 +110,12 @@ class AdminActivityObserver
 
     private function displayNameFor(Model $model): string
     {
-        return match (true) {
-            $model instanceof User => $model->username,
-            $model instanceof Server,
-            $model instanceof Node,
-            $model instanceof Egg,
-            $model instanceof Role => $model->name,
-            default => (string) $model->getKey(),
-        };
+        if (in_array(HasAdminActivityLogging::class, class_uses_recursive($model))) {
+            /** @var Model&\App\Traits\HasAdminActivityLogging $model */
+            return $model->getAdminActivityName();
+        }
+
+        return (string) $model->getKey();
     }
 
     /**
