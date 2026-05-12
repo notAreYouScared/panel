@@ -48,7 +48,7 @@ class AdminActivityObserver
         }
 
         // Deduplicate identical events for the same record within a single request.
-        $key = $event . ':' . get_class($model) . ':' . $model->getKey();
+        $key = $event . ':' . $model::class . ':' . $model->getKey();
         if (isset(static::$logged[$key])) {
             return;
         }
