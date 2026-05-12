@@ -9,7 +9,6 @@ use App\Events\User\Deleting;
 use App\Exceptions\DisplayException;
 use App\Extensions\Avatar\AvatarService;
 use App\Models\Traits\HasAccessTokens;
-use App\Traits\HasAdminActivityLogging;
 use App\Traits\HasValidation;
 use BackedEnum;
 use DateTimeZone;
@@ -119,7 +118,6 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
     use Authenticatable;
     use Authorizable { can as protected canned; }
     use CanResetPassword;
-    use HasAdminActivityLogging;
     use HasAccessTokens;
     use HasFactory;
     use HasRoles;

@@ -24,6 +24,7 @@ use App\Models\Server;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\UserSSHKey;
+use App\Observers\AdminActivityObserver;
 use App\Services\Helpers\PluginService;
 use App\Services\Helpers\SoftwareVersionService;
 use Dedoc\Scramble\Scramble;
@@ -108,6 +109,10 @@ class AppServiceProvider extends ServiceProvider
                 PanelVersionCheck::new(),
                 NodeVersionsCheck::new(),
             ]);
+        }
+
+        foreach ([User::class, Server::class, Node::class, Egg::class, Role::class] as $model) {
+            $model::observe(AdminActivityObserver::class);
         }
 
         Gate::before(fn (User $user, $ability) => $user->isRootAdmin() ? true : null);
