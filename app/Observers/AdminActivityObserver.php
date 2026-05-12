@@ -3,7 +3,6 @@
 namespace App\Observers;
 
 use App\Facades\Activity;
-use App\Traits\HasAdminActivityLogging;
 use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -110,8 +109,7 @@ class AdminActivityObserver
 
     private function displayNameFor(Model $model): string
     {
-        if (in_array(HasAdminActivityLogging::class, class_uses_recursive($model))) {
-            /** @var Model&\App\Traits\HasAdminActivityLogging $model */
+        if (method_exists($model, 'getAdminActivityName')) {
             return $model->getAdminActivityName();
         }
 
