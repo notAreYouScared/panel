@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Resources\Users\Pages;
 use App\Enums\TablerIcon;
 use App\Filament\Admin\Resources\Users\UserResource;
 use App\Models\User;
+use App\Observers\AdminActivityObserver;
 use App\Services\Users\UserUpdateService;
 use App\Traits\Filament\CanCustomizeHeaderActions;
 use App\Traits\Filament\CanCustomizeHeaderWidgets;
@@ -22,6 +23,9 @@ class EditUser extends EditRecord
     protected static string $resource = UserResource::class;
 
     private UserUpdateService $service;
+
+    /** @var int[] */
+    private array $rolesBefore = [];
 
     public function boot(UserUpdateService $service): void
     {
@@ -54,8 +58,24 @@ class EditUser extends EditRecord
         if (!$record instanceof User) {
             return $record;
         }
+        $this->rolesBefore = $record->roles()->orderBy('id')->pluck('id')->all();
         unset($data['roles'], $data['avatar']);
 
         return $this->service->handle($record, $data);
+    }
+
+    protected function afterSave(): void
+    {
+        /** @var User $record */
+        $record = $this->record;
+        if (!$record instanceof User) {
+            return;
+        }
+
+        $rolesAfter = $record->roles()->orderBy('id')->pluck('id')->all();
+
+        if ($this->rolesBefore !== $rolesAfter) {
+            (new AdminActivityObserver())->rolesSynced($record);
+        }
     }
 }

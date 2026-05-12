@@ -86,6 +86,13 @@ class AdminActivityObserver
         ]);
     }
 
+    public function rolesSynced(Model $model): void
+    {
+        $this->log($this->eventFor($model, 'roles_update'), $model, [
+            'name' => $this->displayNameFor($model),
+        ]);
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------

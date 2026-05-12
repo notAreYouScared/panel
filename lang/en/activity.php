@@ -133,6 +133,7 @@ return [
             'create' => 'Created user <b>:name</b>',
             'update' => 'Updated user <b>:name</b>',
             'delete' => 'Deleted user <b>:name</b>',
+            'roles_update' => 'Updated roles for user <b>:name</b>',
         ],
         'server' => [
             'create' => 'Created server <b>:name</b>',
