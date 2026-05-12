@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Contracts\Validatable;
 use App\Exceptions\Service\HasActiveServersException;
 use App\Repositories\Daemon\DaemonSystemRepository;
+use App\Traits\HasAdminActivityLogging;
 use App\Traits\HasValidation;
 use Exception;
 use Illuminate\Database\Eloquent\Collection;
@@ -96,6 +97,7 @@ use Symfony\Component\Yaml\Yaml;
 class Node extends Model implements Validatable
 {
     use HasFactory;
+    use HasAdminActivityLogging;
     use HasValidation;
     use Notifiable;
 

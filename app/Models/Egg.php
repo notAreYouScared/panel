@@ -6,6 +6,7 @@ use App\Contracts\Validatable;
 use App\Exceptions\Service\Egg\HasChildrenException;
 use App\Exceptions\Service\HasActiveServersException;
 use App\Models\Traits\HasIcon;
+use App\Traits\HasAdminActivityLogging;
 use App\Traits\HasValidation;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -94,6 +95,7 @@ use Illuminate\Support\Str;
 class Egg extends Model implements Validatable
 {
     use HasFactory;
+    use HasAdminActivityLogging;
     use HasIcon;
     use HasValidation;
 

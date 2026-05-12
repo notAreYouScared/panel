@@ -10,6 +10,7 @@ use App\Models\Server;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class AdminActivityObserver
 {
@@ -64,134 +65,64 @@ class AdminActivityObserver
         $log->log();
     }
 
-    // -------------------------------------------------------------------------
-    // User events
-    // -------------------------------------------------------------------------
-
-    public function userCreated(User $user): void
+    public function created(Model $model): void
     {
-        $this->log('admin:user.create', $user, ['name' => $user->username]);
+        $this->log($this->eventFor($model, 'create'), $model, [
+            'name' => $this->displayNameFor($model),
+        ]);
     }
 
-    public function userUpdated(User $user): void
+    public function updated(Model $model): void
     {
-        $changedFields = $this->changedFieldsFor($user);
+        $changedFields = $this->changedFieldsFor($model);
+        $name = $this->displayNameFor($model);
 
-        $this->log('admin:user.update', $user, [
-            'name' => empty($changedFields) ? $user->username : sprintf('%s (%s)', $user->username, implode(', ', $changedFields)),
+        $this->log($this->eventFor($model, 'update'), $model, [
+            'name' => empty($changedFields) ? $name : sprintf('%s (%s)', $name, implode(', ', $changedFields)),
             'count' => count($changedFields),
             'changes' => implode(', ', $changedFields),
         ]);
     }
 
-    public function userDeleted(User $user): void
+    public function deleted(Model $model): void
     {
-        $this->log('admin:user.delete', $user, ['name' => $user->username]);
-    }
-
-    // -------------------------------------------------------------------------
-    // Server events
-    // -------------------------------------------------------------------------
-
-    public function serverCreated(Server $server): void
-    {
-        $this->log('admin:server.create', $server, ['name' => $server->name]);
-    }
-
-    public function serverUpdated(Server $server): void
-    {
-        $changedFields = $this->changedFieldsFor($server);
-
-        $this->log('admin:server.update', $server, [
-            'name' => empty($changedFields) ? $server->name : sprintf('%s (%s)', $server->name, implode(', ', $changedFields)),
-            'count' => count($changedFields),
-            'changes' => implode(', ', $changedFields),
+        $this->log($this->eventFor($model, 'delete'), $model, [
+            'name' => $this->displayNameFor($model),
         ]);
-    }
-
-    public function serverDeleted(Server $server): void
-    {
-        $this->log('admin:server.delete', $server, ['name' => $server->name]);
-    }
-
-    // -------------------------------------------------------------------------
-    // Node events
-    // -------------------------------------------------------------------------
-
-    public function nodeCreated(Node $node): void
-    {
-        $this->log('admin:node.create', $node, ['name' => $node->name]);
-    }
-
-    public function nodeUpdated(Node $node): void
-    {
-        $changedFields = $this->changedFieldsFor($node);
-
-        $this->log('admin:node.update', $node, [
-            'name' => empty($changedFields) ? $node->name : sprintf('%s (%s)', $node->name, implode(', ', $changedFields)),
-            'count' => count($changedFields),
-            'changes' => implode(', ', $changedFields),
-        ]);
-    }
-
-    public function nodeDeleted(Node $node): void
-    {
-        $this->log('admin:node.delete', $node, ['name' => $node->name]);
-    }
-
-    // -------------------------------------------------------------------------
-    // Egg events
-    // -------------------------------------------------------------------------
-
-    public function eggCreated(Egg $egg): void
-    {
-        $this->log('admin:egg.create', $egg, ['name' => $egg->name]);
-    }
-
-    public function eggUpdated(Egg $egg): void
-    {
-        $changedFields = $this->changedFieldsFor($egg);
-
-        $this->log('admin:egg.update', $egg, [
-            'name' => empty($changedFields) ? $egg->name : sprintf('%s (%s)', $egg->name, implode(', ', $changedFields)),
-            'count' => count($changedFields),
-            'changes' => implode(', ', $changedFields),
-        ]);
-    }
-
-    public function eggDeleted(Egg $egg): void
-    {
-        $this->log('admin:egg.delete', $egg, ['name' => $egg->name]);
-    }
-
-    // -------------------------------------------------------------------------
-    // Role events
-    // -------------------------------------------------------------------------
-
-    public function roleCreated(Role $role): void
-    {
-        $this->log('admin:role.create', $role, ['name' => $role->name]);
-    }
-
-    public function roleUpdated(Role $role): void
-    {
-        $changedFields = $this->changedFieldsFor($role);
-
-        $this->log('admin:role.update', $role, [
-            'name' => empty($changedFields) ? $role->name : sprintf('%s (%s)', $role->name, implode(', ', $changedFields)),
-            'count' => count($changedFields),
-            'changes' => implode(', ', $changedFields),
-        ]);
-    }
-
-    public function roleDeleted(Role $role): void
-    {
-        $this->log('admin:role.delete', $role, ['name' => $role->name]);
     }
 
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    private function eventFor(Model $model, string $action): string
+    {
+        return sprintf('admin:%s.%s', $this->resourceNameFor($model), $action);
+    }
+
+    private function resourceNameFor(Model $model): string
+    {
+        if (defined($model::class . '::RESOURCE_NAME')) {
+            /** @var string $resourceName */
+            $resourceName = $model::RESOURCE_NAME;
+
+            return $resourceName;
+        }
+
+        return Str::of(class_basename($model))->snake()->toString();
+    }
+
+    private function displayNameFor(Model $model): string
+    {
+        return match (true) {
+            $model instanceof User => $model->username,
+            $model instanceof Server,
+            $model instanceof Node,
+            $model instanceof Egg,
+            $model instanceof Role => $model->name,
+            default => (string) $model->getKey(),
+        };
+    }
 
     /**
      * Returns the sorted list of attribute names that changed on the given model,

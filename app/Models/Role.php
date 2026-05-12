@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\RolePermissionModels;
 use App\Enums\RolePermissionPrefixes;
 use App\Enums\TablerIcon;
+use App\Traits\HasAdminActivityLogging;
 use BackedEnum;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -42,6 +43,7 @@ use Spatie\Permission\Models\Role as BaseRole;
 class Role extends BaseRole
 {
     use HasFactory;
+    use HasAdminActivityLogging;
 
     public const RESOURCE_NAME = 'role';
 
