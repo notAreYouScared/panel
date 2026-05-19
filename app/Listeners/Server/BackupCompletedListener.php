@@ -3,8 +3,10 @@
 namespace App\Listeners\Server;
 
 use App\Events\Server\BackupCompleted;
+use App\Models\ActivityLog;
 use App\Filament\Server\Resources\Backups\Pages\ListBackups;
 use App\Notifications\BackupCompleted as BackupCompletedNotification;
+use Illuminate\Database\Eloquent\Builder;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 
@@ -14,6 +16,10 @@ class BackupCompletedListener
     {
         $event->backup->loadMissing('server');
         $event->backup->server->loadMissing('user');
+
+        if ($this->isScheduledBackup($event)) {
+            return;
+        }
 
         $locale = $event->backup->server->user->language ?? 'en';
 
@@ -33,5 +39,15 @@ class BackupCompletedListener
         if (config()->get('panel.email.send_backup_completed_notification', true)) {
             $event->backup->server->user->notify(new BackupCompletedNotification($event->backup));
         }
+    }
+
+    private function isScheduledBackup(BackupCompleted $event): bool
+    {
+        return !ActivityLog::query()
+            ->forEvent('server:backup.start')
+            ->whereHas('subjects', fn (Builder $query) => $query
+                ->where('subject_id', $event->backup->id)
+                ->where('subject_type', $event->backup->getMorphClass()))
+            ->exists();
     }
 }
