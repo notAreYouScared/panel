@@ -2,6 +2,7 @@
 
 namespace App\Services\Nodes;
 
+use App\Enums\NodeJwtTokenType;
 use App\Extensions\Lcobucci\JWT\Encoding\TimestampDates;
 use App\Models\Node;
 use App\Models\User;
@@ -23,6 +24,8 @@ class NodeJWTService
     private DateTimeImmutable $expiresAt;
 
     private ?string $subject = null;
+
+    private ?NodeJwtTokenType $tokenType = null;
 
     /**
      * Set the claims to include in this JWT.
@@ -61,11 +64,22 @@ class NodeJWTService
         return $this;
     }
 
+    public function setTokenType(NodeJwtTokenType $tokenType): self
+    {
+        $this->tokenType = $tokenType;
+
+        return $this;
+    }
+
     /**
      * Generate a new JWT for a given node.
      */
     public function handle(Node $node, ?string $identifiedBy, string $algo = 'sha256'): UnencryptedToken
     {
+        if (is_null($this->tokenType)) {
+            throw new \LogicException('Cannot issue a node JWT without a token type.');
+        }
+
         $identifier = hash($algo, $identifiedBy);
         $config = Configuration::forSymmetricSigner(new Sha256(), InMemory::plainText($node->daemon_token));
 
@@ -94,6 +108,7 @@ class NodeJWTService
         }
 
         return $builder
+            ->withClaim('token_type', $this->tokenType->value)
             ->withClaim('unique_id', Str::random())
             ->getToken($config->signer(), $config->signingKey());
     }

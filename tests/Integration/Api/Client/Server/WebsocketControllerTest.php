@@ -2,6 +2,7 @@
 
 namespace App\Tests\Integration\Api\Client\Server;
 
+use App\Enums\NodeJwtTokenType;
 use App\Enums\SubuserPermission;
 use App\Models\Server;
 use App\Models\User;
@@ -84,6 +85,7 @@ class WebsocketControllerTest extends ClientApiIntegrationTestCase
         $this->assertSame($user->uuid, $claims->get('user_uuid'));
         $this->assertSame($server->uuid, $claims->get('server_uuid'));
         $this->assertSame(['*'], $claims->get('permissions'));
+        $this->assertSame(NodeJwtTokenType::Websocket->value, $claims->get('token_type'));
     }
 
     public function test_jwt_is_configured_correctly_for_server_subuser(): void
@@ -112,5 +114,6 @@ class WebsocketControllerTest extends ClientApiIntegrationTestCase
         );
 
         $this->assertSame($permissions, $token->claims()->get('permissions'));
+        $this->assertSame(NodeJwtTokenType::Websocket->value, $token->claims()->get('token_type'));
     }
 }

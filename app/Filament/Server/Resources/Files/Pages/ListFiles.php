@@ -4,6 +4,7 @@ namespace App\Filament\Server\Resources\Files\Pages;
 
 use App\Enums\CustomizationKey;
 use App\Enums\EditorLanguages;
+use App\Enums\NodeJwtTokenType;
 use App\Enums\SubuserPermission;
 use App\Enums\TablerIcon;
 use App\Exceptions\Repository\FileExistsException;
@@ -627,6 +628,7 @@ class ListFiles extends ListRecords
 
         $token = $jwtService
             ->setExpiresAt(CarbonImmutable::now()->addMinutes(15))
+            ->setTokenType(NodeJwtTokenType::FileUpload)
             ->setUser(user())
             ->setClaims(['server_uuid' => $server->uuid])
             ->handle($server->node, user()->id . $server->uuid);

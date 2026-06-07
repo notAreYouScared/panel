@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Client\ClientApiController;
 use App\Http\Requests\Api\Client\Servers\Files\UploadFileRequest;
 use App\Models\Server;
 use App\Models\User;
+use App\Enums\NodeJwtTokenType;
 use App\Services\Nodes\NodeJWTService;
 use Carbon\CarbonImmutable;
 use Dedoc\Scramble\Attributes\Group;
@@ -45,6 +46,7 @@ class FileUploadController extends ClientApiController
     {
         $token = $this->jwtService
             ->setExpiresAt(CarbonImmutable::now()->addMinutes(15))
+            ->setTokenType(NodeJwtTokenType::FileUpload)
             ->setUser($user)
             ->setClaims(['server_uuid' => $server->uuid])
             ->handle($server->node, $user->id . $server->uuid);
