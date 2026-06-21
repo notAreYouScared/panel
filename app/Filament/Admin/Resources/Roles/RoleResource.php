@@ -123,7 +123,9 @@ class RoleResource extends Resource
             $options = [];
 
             foreach ($permissions as $permission) {
-                $options[$permission . ' ' . $model] = Str::headline($permission);
+                $key = 'admin/role.permission_labels.' . $permission;
+                $translated = trans($key);
+                $options[$permission . ' ' . $model] = $translated !== $key ? $translated : Str::headline($permission);
             }
 
             $permissionSections[] = self::makeSection($model, $options);
@@ -166,7 +168,11 @@ class RoleResource extends Resource
      */
     private static function makeSection(string $model, array $options): Section
     {
-        return Section::make(Str::headline($model))
+        $key = 'admin/role.models.' . $model;
+        $translated = trans($key);
+        $heading = $translated !== $key ? $translated : Str::headline($model);
+
+        return Section::make($heading)
             ->columnSpan(1)
             ->collapsible()
             ->collapsed()

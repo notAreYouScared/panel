@@ -173,6 +173,7 @@ class WebhookResource extends Resource
                                 Grid::make()
                                     ->schema([
                                         ToggleButtons::make('type')
+                                            ->label(trans('admin/webhook.type'))
                                             ->live()
                                             ->inline()
                                             ->options(WebhookType::class)

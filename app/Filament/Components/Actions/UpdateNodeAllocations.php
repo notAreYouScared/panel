@@ -23,6 +23,8 @@ class UpdateNodeAllocations extends Action
 
         $this->tooltip(trans('admin/node.bulk_update_ip'));
 
+        $this->label(trans('admin/node.bulk_update_ip'));
+
         $this->icon(TablerIcon::Replace);
 
         $this->color('warning');

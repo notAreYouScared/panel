@@ -11,6 +11,7 @@ return [
     'name' => 'Name',
     'cron' => 'Cron',
     'status' => 'Status',
+    'new_status' => 'New',
     'schedule_status' => [
         'inactive' => 'Inactive',
         'processing' => 'Processing',

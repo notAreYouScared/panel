@@ -30,6 +30,7 @@ class ServersRelationManager extends RelationManager
                     ->url(fn (Server $server): string => route('filament.admin.resources.servers.edit', ['record' => $server]))
                     ->sortable(),
                 TextColumn::make('node.name')
+                    ->label(trans('admin/server.node'))
                     ->url(fn (Server $server): string => route('filament.admin.resources.nodes.edit', ['record' => $server->node])),
                 TextColumn::make('image')
                     ->label(trans('admin/server.docker_image')),
