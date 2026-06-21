@@ -36,6 +36,7 @@ return [
     'connection_error' => 'Error connecting to database host',
     'no_database_hosts' => 'No Database Hosts',
     'no_nodes' => 'No Nodes',
+    'nodes' => 'Nodes',
     'delete_help' => 'Database Host Has Databases',
     'unlimited' => 'Unlimited',
     'anywhere' => 'Anywhere',

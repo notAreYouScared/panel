@@ -8,6 +8,7 @@ return [
     'description' => 'Description',
     'name' => 'Name',
     'server' => 'Server',
+    'type' => 'Type',
     'information' => 'Information',
     'payload' => 'Payload',
     'events' => 'Events',

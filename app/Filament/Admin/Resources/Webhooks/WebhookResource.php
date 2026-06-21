@@ -100,7 +100,8 @@ class WebhookResource extends Resource
                     ->label(trans('admin/webhook.name')),
                 TextColumn::make('description')
                     ->label(trans('admin/webhook.table.description')),
-                IconColumn::make('type'),
+                IconColumn::make('type')
+                    ->label(trans('admin/webhook.type')),
                 TextColumn::make('server.name')
                     ->label('Server')
                     ->placeholder('—')
