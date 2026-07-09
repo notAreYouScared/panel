@@ -5,6 +5,7 @@ namespace App\Filament\Server\Widgets;
 use App\Enums\NodeJwtScope;
 use App\Enums\SubuserPermission;
 use App\Exceptions\Http\HttpForbiddenException;
+use App\Jobs\Server\CollectServerStatsJob;
 use App\Livewire\AlertBanner;
 use App\Models\Server;
 use App\Models\User;
@@ -38,6 +39,13 @@ class ServerConsole extends Widget
     private GetUserPermissionsService $getUserPermissionsService;
 
     private NodeJWTService $nodeJWTService;
+
+    public function mount(): void
+    {
+        if ($this->server && $this->user) {
+            CollectServerStatsJob::dispatch($this->server);
+        }
+    }
 
     public function boot(GetUserPermissionsService $getUserPermissionsService, NodeJWTService $nodeJWTService): void
     {
@@ -112,23 +120,6 @@ class ServerConsole extends Widget
     public function tokenRequest(): void
     {
         $this->dispatch('sendAuthRequest', token: $this->getToken());
-    }
-
-    #[On('store-stats')]
-    public function storeStats(string $data): void
-    {
-        $data = json_decode($data);
-
-        $timestamp = now()->getTimestamp();
-
-        foreach ($data as $key => $value) {
-            $cacheKey = "servers.{$this->server->id}.$key";
-            $cachedStats = cache()->get($cacheKey, []);
-
-            $cachedStats[$timestamp] = $value;
-
-            cache()->put($cacheKey, array_slice($cachedStats, -120), now()->addMinute());
-        }
     }
 
     #[On('websocket-error')]

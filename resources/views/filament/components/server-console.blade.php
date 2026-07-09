@@ -164,9 +164,6 @@
                 case 'daemon error':
                     handleDaemonErrorOutput(args[0]);
                     break;
-                case 'stats':
-                    $wire.dispatchSelf('store-stats', { data: args[0] });
-                    break;
                 case 'auth success':
                     socket.send(JSON.stringify({
                         'event': 'send logs',
